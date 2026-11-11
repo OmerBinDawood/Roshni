@@ -13,6 +13,8 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+from google.genai import errors as genai_errors  # noqa: E402
+
 from . import gemini  # noqa: E402
 from .engine.audit import battery_options, run_audit  # noqa: E402
 from .engine.data import cities, regulatory  # noqa: E402
@@ -51,6 +53,10 @@ def _guard(fn, *a, **kw):
         return fn(*a, **kw)
     except RuntimeError as e:
         raise HTTPException(503, str(e))
+    except genai_errors.APIError as e:
+        raise HTTPException(502, f"AI service error ({e.code}): {e.message}")
+    except ValueError as e:  # malformed model output that failed schema validation
+        raise HTTPException(502, f"Could not read the AI response, please try again. ({str(e)[:200]})")
 
 
 @app.get("/api/health")

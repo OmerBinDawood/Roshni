@@ -77,7 +77,7 @@ export default function ReportView() {
         </Card>
       </div>
 
-      {f.regime === "NET_BILLING_2026" && (
+      {f.regime === "NET_BILLING_2026" && f.export_share > 0 && (
         <Card>
           <h2 className="font-semibold">Why your rules matter</h2>
           <p className="text-sm text-muted mt-1">Same system, same home — expected monthly saving under each rule set:</p>

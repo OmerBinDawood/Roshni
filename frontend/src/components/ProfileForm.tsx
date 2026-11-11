@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { api, type Profile } from "@/lib/api";
+import { api, type AC, type Profile } from "@/lib/api";
 import { Button, Num } from "./ui";
 
 export default function ProfileForm({ value, onChange, showRegime = true }: {
@@ -18,6 +18,7 @@ export default function ProfileForm({ value, onChange, showRegime = true }: {
     try {
       const p = await api.post<Partial<Profile>>("/profile/parse", { text: freeText });
       const clean = Object.fromEntries(Object.entries(p).filter(([, v]) => v !== null && v !== undefined)) as Partial<Profile>;
+      if (clean.acs) clean.acs = clean.acs.map((a: Partial<AC>) => ({ count: 1, tons: 1.5, inverter: true, day_hours: 6, night_hours: 6, ...a }));
       onChange({ ...value, ...clean });
     } catch (e) { alert((e as Error).message); } finally { setParsing(false); }
   }

@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 from .engine.data import DATA_DIR
 from .schemas import Bill, BatterySpec, InverterSpec, PanelSpec, Quote
 
-MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
 _client: genai.Client | None = None
 
 DOC_GUARD = (
