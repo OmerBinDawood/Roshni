@@ -1,8 +1,13 @@
 fastapi==0.162.4
 google-genai==3.1.0
 httpx==0.28.1
+pillow==13.0.0
+psycopg==3.3.8
+psycopg-binary==3.3.8
 pvlib==0.16.1
 pytest==9.2.0
 python-dotenv==1.2.4
 python-multipart==0.0.33
+RapidFuzz==3.14.6
+SQLAlchemy==2.1.8
 uvicorn==0.54.0

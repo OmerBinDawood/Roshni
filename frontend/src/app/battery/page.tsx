@@ -25,7 +25,7 @@ export default function BatteryPage() {
     setBusy(true); setError(null);
     const units = history.split(/[,\s]+/).filter(Boolean).map(Number).filter((n) => !isNaN(n));
     try {
-      setRes(await api.post<Res>("/battery", { profile, dc_kw: dcKw, inverter_kw: invKw, cost_per_usable_kwh: cost,
+      setRes(await api.post<Res>("/battery", { profile, dc_kw: dcKw, inverter_kw: invKw, inverter_type: invType, cost_per_usable_kwh: cost,
         bill: units.length ? { monthly_units_history: units, current_units: units[units.length - 1] } : null }));
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
@@ -41,7 +41,7 @@ export default function BatteryPage() {
           <Num label="Inverter (kW)" step={0.5} value={invKw} onChange={setInvKw} />
           <div><label>Inverter type</label>
             <select value={invType} onChange={(e) => setInvType(e.target.value)}>
-              <option value="on_grid">On-grid</option><option value="hybrid">Hybrid</option>
+              <option value="on_grid">On-grid</option><option value="hybrid">Hybrid (no battery yet)</option>
             </select>
           </div>
           <Num label="Battery cost per usable kWh (Rs)" step={1000} value={cost} onChange={setCost} />

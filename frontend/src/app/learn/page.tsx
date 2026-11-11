@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui";
 import { useLang } from "@/lib/i18n";
+import { GLOSSARY, LESSONS } from "@/lib/learn";
 
 const SCENES = ["Day", "Night", "Load-shedding (day)", "Load-shedding (night)"] as const;
 type Sys = "On-grid" | "Hybrid" | "Off-grid";
@@ -26,17 +27,8 @@ const APPLIANCES = [
   { id: "iron", name: "Iron", icon: "👕", kw: 1.0, surge: 1.0 },
 ];
 
-const LESSONS = [
-  ["Units vs kW", "A 'unit' on your bill is 1 kWh: 1 kW running for 1 hour. kW is how hard something pulls right now; units are how much it used over time."],
-  ["What is kWp?", "The size of your panels under lab conditions. 10 panels × 585 W = 5.85 kWp. In Pakistan each kWp makes roughly 4 to 4.5 units a day on average."],
-  ["Inverter size", "The inverter must handle everything switched on at once, plus the kick when a motor or fridge starts."],
-  ["Battery size", "Size a battery by what must run in load-shedding and for how long — not by your whole monthly bill. Compare batteries by usable kWh."],
-  ["Net billing", "Since 9 Feb 2026, new users sell extra units at about Rs 10–11, but buy at your full tariff. Use solar during the day; don't oversize just to export."],
-  ["Fixed charges", "Since Feb 2026 a fixed monthly charge applies whatever you use. Solar cannot remove it."],
-];
-
 export default function LearnPage() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [sys, setSys] = useState<Sys>("On-grid");
   const [on, setOn] = useState<Record<string, number>>({ fan: 3, light: 5, fridge: 1 });
   const [battKwh, setBattKwh] = useState(5);
@@ -100,18 +92,87 @@ export default function LearnPage() {
         </div>
       </Card>
 
+      <Quiz />
+
       <Card>
         <h2 className="font-semibold text-lg">Solar Seekhein · <span className="urdu font-normal">سولر سیکھیں</span></h2>
+        <p className="text-sm text-muted">10 two-minute lessons. Tap 🔊 to listen.</p>
         <div className="mt-3 grid sm:grid-cols-2 gap-3">
-          {LESSONS.map(([h, b]) => (
-            <details key={h} className="rounded-xl bg-bg p-3">
-              <summary className="font-medium cursor-pointer">{h}</summary>
-              <p className="mt-2 text-sm text-muted">{b}</p>
-            </details>
-          ))}
+          {LESSONS.map((l, i) => {
+            const [h, body] = lang === "ur" ? l.ur : l.en;
+            return (
+              <details key={l.id} id={l.id} className="rounded-xl bg-bg p-3">
+                <summary className={`font-medium cursor-pointer ${lang === "ur" ? "urdu" : ""}`}>{i + 1}. {l.icon} {h}</summary>
+                <p className={`mt-2 text-sm ${lang === "ur" ? "urdu" : "text-muted"}`}>{body}</p>
+                <button className="mt-1 text-xs text-muted hover:text-ink" onClick={() => speak(body, lang)}>🔊 Listen</button>
+              </details>
+            );
+          })}
         </div>
         <p className="mt-3 text-sm text-muted">Have a question? Ask Madadgar (bottom corner) in Urdu, Roman Urdu or English.</p>
       </Card>
+
+      <Card>
+        <h2 className="font-semibold text-lg" id="glossary">Glossary</h2>
+        <dl className="mt-2 grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+          {GLOSSARY.map(([term, def]) => (
+            <div key={term}><dt className="font-medium">{term}</dt><dd className="text-muted">{def}</dd></div>
+          ))}
+        </dl>
+      </Card>
     </div>
+  );
+}
+
+function speak(text: string, lang: string) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang === "ur" ? "ur-PK" : "en-US";
+  speechSynthesis.cancel(); speechSynthesis.speak(u);
+}
+
+// "Which type fits me?" 3-question quiz (PRD 9.8)
+const QUESTIONS = [
+  { q: "Do you need lights and fans during load-shedding?", opts: [["Yes, that's the main reason", 2], ["Would be nice", 1], ["No, I just want a lower bill", 0]] },
+  { q: "How long are outages where you live?", opts: [["More than 4 hours a day", 2], ["1 to 4 hours", 1], ["Rare / almost none", 0]] },
+  { q: "Is your grid connection reliable enough to sell extra units?", opts: [["No grid / very weak grid", 3], ["Yes, normal connection", 0]] },
+] as const;
+
+function Quiz() {
+  const [ans, setAns] = useState<(number | null)[]>([null, null, null]);
+  const done = ans.every((a) => a !== null);
+  const score = ans.reduce<number>((s, a) => s + (a ?? 0), 0);
+  const result = !done ? null : ans[2] === 3
+    ? ["Off-grid", "Without a dependable grid, an off-grid system with batteries is the practical choice. Size the battery for your night-time needs."]
+    : score >= 3
+      ? ["Hybrid with a battery", "Backup matters to you. A hybrid inverter with a battery keeps chosen appliances running in load-shedding and also lowers your bill."]
+      : score >= 1
+        ? ["Hybrid (battery now or later)", "A hybrid inverter lets you start without a battery and add one later. Check that the inverter supports the battery you may add."]
+        : ["On-grid", "If you only want a lower bill and rarely face outages, on-grid is the cheapest. Remember: it gives no backup in load-shedding."];
+  return (
+    <Card>
+      <h2 className="font-semibold text-lg">Which type fits me?</h2>
+      <div className="mt-3 space-y-4">
+        {QUESTIONS.map((q, i) => (
+          <fieldset key={q.q}>
+            <legend className="font-medium text-sm">{i + 1}. {q.q}</legend>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {q.opts.map(([label, v]) => (
+                <button key={label} onClick={() => setAns(ans.map((x, j) => (j === i ? (v as number) : x)))}
+                  className={`px-3 py-1.5 rounded-full border text-sm ${ans[i] === v ? "bg-sun/25 border-sun" : "border-line"}`}>{label}</button>
+              ))}
+            </div>
+          </fieldset>
+        ))}
+      </div>
+      {result && (
+        <div className="mt-4 rounded-xl bg-sun/15 p-4">
+          <div className="text-sm text-muted">Likely fit</div>
+          <div className="text-xl font-bold">{result[0]}</div>
+          <p className="text-sm mt-1">{result[1]}</p>
+          <p className="text-xs text-muted mt-2">A rough guide only. Already have a quote? <a className="underline" href="/audit">Check it</a>.</p>
+        </div>
+      )}
+    </Card>
   );
 }

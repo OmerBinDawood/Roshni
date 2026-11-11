@@ -178,16 +178,32 @@ def run_rules(req: AuditRequest, ctx: dict) -> list[Finding]:
                       f"Inverter is {inv.phase}-phase; your connection is {user_phase}-phase.",
                       question="Is the inverter single- or three-phase? Do I need a load extension?"))
 
-    # R12-R16 balance of system presence
-    bos = [("R12", {"dc_breaker", "dc_spd"}, "DC protection (breaker/isolator, surge protector)", "Which DC breaker and surge protector are included?"),
-           ("R13", {"ac_breaker", "ac_spd"}, "AC protection (breaker, surge protector)", "Which AC breaker and surge protector are included?"),
-           ("R14", {"earthing"}, "Earthing", "How many earthing pits, and is DC earthing separate?"),
-           ("R15", {"dc_cable", "ac_cable"}, "Cable type and size", "What size and brand of DC and AC cable?"),
-           ("R16", {"structure"}, "Mounting structure", "What gauge and coating is the structure, and how is it anchored?")]
-    for rid, need, label, qn in bos:
-        if not (types & need):
+    # R12-R16 balance of system presence. Quotes often bundle these into one line ("structure, wiring, earthing,
+    # SPD"), so an item counts as listed if its type matches OR any line's text mentions it.
+    doc = "parts list" if ctx.get("mode") == "parts" else "quote"
+    corpus = " ".join(f"{li.description or ''} {li.model or ''}" for li in items).lower()
+    bos = [("R12", {"dc_breaker", "dc_spd"},
+            r"\bdc\b[^,;]{0,25}(breaker|isolator|mcb|fuse|spd|surge)|(breaker|isolator|spd|surge)[^,;]{0,15}\bdc\b|dc\s*/\s*ac\s*(spd|breaker)",
+            "DC protection (breaker/isolator, surge protector)", "Which DC breaker and surge protector are included?"),
+           ("R13", {"ac_breaker", "ac_spd"},
+            r"\bac\b[^,;]{0,25}(breaker|mcb|spd|surge)|(breaker|spd|surge)[^,;]{0,15}\bac\b|dc\s*/\s*ac\s*(spd|breaker)|\bac\s*/\s*dc\b",
+            "AC protection (breaker, surge protector)", "Which AC breaker and surge protector are included?"),
+           ("R14", {"earthing"}, r"earth|\bground(ing)?\b", "Earthing", "How many earthing pits, and is DC earthing separate?"),
+           ("R15", {"dc_cable", "ac_cable"}, r"cabl|\bwir(e|es|ing)\b", "Cable type and size", "What size and brand of DC and AC cable?"),
+           ("R16", {"structure"}, r"structur|\bstand\b|mount|\bframe|\brack", "Mounting structure",
+            "What gauge and coating is the structure, and how is it anchored?")]
+    protect_types = {"dc_breaker", "dc_spd", "ac_breaker", "ac_spd"}
+    protect_corpus = " ".join(f"{li.description or ''} {li.model or ''}" for li in items if li.item_type in protect_types).lower()
+    for rid, need, pattern, label, qn in bos:
+        if need <= protect_types and re.search(pattern, protect_corpus):
+            continue  # listed on its own protection line, e.g. "DC breaker + SPD, AC breaker"
+        if not (types & need) and not re.search(pattern, corpus):
             out.append(_f(rid, "CLARIFY", f"{label} not listed",
-                          f"The quote does not mention: {label}. Missing items are a common cause of fires, damage and hidden extra charges.",
+                          f"The {doc} does not mention: {label}. Missing items are a common cause of fires, damage and hidden extra charges.",
+                          question=qn))
+        elif not (types & need):
+            out.append(_f(rid, "CLARIFY", f"{label}: mentioned but not itemised",
+                          f"{label} is bundled into another line without brand, rating or size, so it cannot be checked.",
                           question=qn))
 
     # R17 warranties
@@ -213,6 +229,12 @@ def run_rules(req: AuditRequest, ctx: dict) -> list[Finding]:
         out.append(_f("R19", "CRITICAL", "Savings claim looks based on old net-metering rules",
                       f"New connections get net billing: exported units earn ~Rs {regulatory()['regimes']['NET_BILLING_2026']['buyback_rate_rs']:.0f}, not your full tariff. Our estimate for your home is Rs {exp['low']:,.0f} to {exp['high']:,.0f} per month on average.",
                       claim, "Your savings assume 1:1 net metering; new connections get net billing. Please recalculate."))
+    elif exp and q.claimed_monthly_savings_rs and q.claimed_monthly_savings_rs > exp["high"] * 1.2:
+        out.append(_f("R19", "CLARIFY", "Savings claim is higher than our estimate",
+                      f"The quote claims Rs {q.claimed_monthly_savings_rs:,.0f}/month; for your home and rules we estimate "
+                      f"Rs {exp['low']:,.0f} to {exp['high']:,.0f}.",
+                      f"Rs {q.claimed_monthly_savings_rs:,.0f}/month claimed",
+                      "How did you calculate the monthly savings? Which units and tariff did you assume?"))
 
     # R20 oversizing for export
     if regime == "NET_BILLING_2026" and ctx["export_share"] > 0.4:
@@ -233,6 +255,22 @@ def run_rules(req: AuditRequest, ctx: dict) -> list[Finding]:
             else:
                 out.append(_f("R21", "INFO", "Panel price within or near observed range",
                               f"Rs {rpw:.1f}/W vs Rs {lo} to {hi}/W (as of {bm['as_of']})."))
+        if li.item_type == "inverter" and li.unit_price and inv.rated_kw and 4.5 <= inv.rated_kw <= 6.5:
+            ib = bm["inverter_5_6kw_rs"]
+            if li.unit_price > ib["high"] * 1.1:
+                out.append(_f("R21", "CLARIFY", "Inverter price above the observed range",
+                              f"Rs {li.unit_price:,.0f} vs Rs {ib['low']:,} to {ib['high']:,} for 5 to 6 kW inverters ({ib['source_ref']}).",
+                              question="This item is above the observed range; what explains the difference?"))
+            else:
+                out.append(_f("R21", "INFO", "Inverter price within the observed range",
+                              f"Rs {li.unit_price:,.0f} vs Rs {ib['low']:,} to {ib['high']:,} for 5 to 6 kW ({ib['source_ref']})."))
+    total = q.grand_total
+    if total and dc_kw and not has_batt and inv.type == "on_grid" and 4.5 <= dc_kw <= 6.5:
+        sb = bm["system_5kw_ongrid_rs"]
+        if total > sb["high"] * 1.1:
+            out.append(_f("R21", "CLARIFY", "Total price above the observed range for a ~5 kW on-grid system",
+                          f"Rs {total:,.0f} vs Rs {sb['low']:,} to {sb['high']:,} ({sb['source_ref']}).",
+                          question="What explains the higher total compared to typical 5 kW on-grid systems?"))
 
     # R22 net billing fees
     if regime == "NET_BILLING_2026" and inv.type != "off_grid" and "net_metering_fee" not in types:

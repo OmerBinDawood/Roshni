@@ -24,7 +24,9 @@ def energy_model(profile: Profile, bill: Bill | None, *, dc_kw: float, ac_kw: fl
     load = build_load(profile, base.index, base["temp_air"].values)
     recon = []
     if bill and bill.monthly_units_history:
-        load, recon = scale_to_bill(load, bill.monthly_units_history)
+        scaled, recon = scale_to_bill(load, bill.monthly_units_history, bill.bill_month)
+        if profile.scale_to_bill:
+            load = scaled
     outage = outage_mask(base.index, profile.outage_hours_per_day)
     return base.index, (pv["pv_kw"].values if pv is not None else np.zeros(len(load))), load.values, outage, recon, \
         (pv.attrs.get("clipped_kwh", 0) if pv is not None else 0)
@@ -91,54 +93,134 @@ def run_audit(req: AuditRequest) -> dict:
         p, req.bill, dc_kw=dc_kw, ac_kw=s.inverter.rated_kw, inverter_type=inv_type, usable_kwh=usable,
         batt_kw=batt_kw, tilt=s.tilt, azimuth=s.azimuth,
         gamma=s.panel.gamma_pmax_pct if s.panel.gamma_pmax_pct is not None else -0.35)
-    fin = financials(p, req.bill, idx, pv, load, outage, inverter_type=inv_type, usable_kwh=usable, batt_kw=batt_kw)
+    parts = req.mode == "parts"
+    fin = None if parts else financials(p, req.bill, idx, pv, load, outage, inverter_type=inv_type, usable_kwh=usable, batt_kw=batt_kw)
     site = site_temperatures(p.city)
-    ctx = {"site": site, "regime": fin["regime"], "savings_monthly": fin["savings_monthly"], "export_share": fin["export_share"]}
+    ctx = {"site": site, "mode": req.mode,
+           "regime": fin["regime"] if fin else None,
+           "savings_monthly": fin["savings_monthly"] if fin else None,
+           "export_share": fin["export_share"] if fin else 0.0}
     findings = sorted(run_rules(req, ctx), key=lambda f: SEV_ORDER[f.severity])
 
     capex = req.quote.grand_total or sum((li.line_total or (li.quantity or 0) * (li.unit_price or 0)) for li in req.quote.line_items)
-    inv_cost = next((li.line_total or li.unit_price for li in req.quote.line_items if li.item_type == "inverter" and (li.line_total or li.unit_price)), capex * 0.2)
-    bat_cost = sum((li.line_total or (li.quantity or 1) * (li.unit_price or 0)) for li in req.quote.line_items if li.item_type == "battery")
-    cf = cashflow(capex=capex, annual_saving_by_regime=fin.pop("_by_regime_annual"), regime=fin["regime"],
-                  legacy_expiry=fin["legacy_expiry_year"], inverter_cost=inv_cost or 0, battery_cost=bat_cost) if capex else None
+    cf = None
+    if fin:
+        inv_cost = next((li.line_total or li.unit_price for li in req.quote.line_items
+                         if li.item_type == "inverter" and (li.line_total or li.unit_price)), capex * 0.2)
+        bat_cost = sum((li.line_total or (li.quantity or 1) * (li.unit_price or 0)) for li in req.quote.line_items if li.item_type == "battery")
+        by_regime = fin.pop("_by_regime_annual")
+        if capex:
+            cf = cashflow(capex=capex, annual_saving_by_regime=by_regime, regime=fin["regime"],
+                          legacy_expiry=fin["legacy_expiry_year"], inverter_cost=inv_cost or 0, battery_cost=bat_cost)
 
     n_crit = sum(f.severity == "CRITICAL" for f in findings)
     n_clar = sum(f.severity == "CLARIFY" for f in findings)
     verdict = "red" if n_crit else ("amber" if n_clar else "green")
     reg = regulatory()
     unverified = [n for n, sp in (("panel", s.panel), ("inverter", s.inverter), ("battery", s.battery)) if sp.source and not sp.verified]
+    bl = backup_loads(req)
+    assumptions = [f"Weather: PVGIS typical year for {p.city}; coldest air {site['t_min_air']:.0f} C, "
+                   f"hottest panel {site['t_cell_max']:.0f} C (used for string checks)."]
+    if fin:
+        assumptions = [
+            f"Rules as of {reg['as_of']} ({fin['regime_label']}); buyback ~Rs {reg['regimes']['NET_BILLING_2026']['buyback_rate_rs']:.0f}/unit.",
+            f"Import price Rs {fin['effective_rate']}/unit from {fin['effective_rate_source']}; fixed charge Rs {fin['fixed_charge']:.0f}/month stays after solar.",
+            f"Weather: PVGIS typical year for {p.city}; {p.outage_hours_per_day:g} h/day load-shedding; soiling loss 7%, total system losses ~15%.",
+            "Inverter replacement assumed in year 11; battery replacement every 10 years.",
+        ]
+        if recon:
+            assumptions.append("Your answers were scaled to match your bill history." if p.scale_to_bill
+                               else "Your answers were NOT scaled to your bill history (your choice).")
     return {
+        "mode": req.mode,
         "verdict": verdict, "counts": {"critical": n_crit, "clarify": n_clar},
         "system_summary": {"dc_kwp": round(dc_kw, 2), "inverter_kw": s.inverter.rated_kw, "inverter_type": inv_type,
                            "battery_usable_kwh": round(usable, 1), "panel_count": s.panel_count},
         "findings": [f.model_dump() for f in findings],
         "questions": [f.question for f in findings if f.question and f.severity in ("CRITICAL", "CLARIFY")],
         "finance": fin, "cashflow": cf, "capex": capex,
-        "backup": {**backup_loads(req), "outage_hours_per_day": p.outage_hours_per_day,
-                   "unserved_kwh_year": fin["annual"]["unserved_kwh"], "battery_usable_kwh": round(usable, 1),
-                   "hours_on_battery": round(usable / max(backup_loads(req)["running_kw"], 0.01), 1) if usable else 0,
-                   "works_in_outage": inv_type != "on_grid"},
-        "site": site, "reconciliation": recon, "clipped_kwh": round(clipped),
-        "assumptions": [
-            f"Rules as of {reg['as_of']} ({fin['regime_label']}); buyback ~Rs {reg['regimes']['NET_BILLING_2026']['buyback_rate_rs']:.0f}/unit.",
-            f"Import price Rs {fin['effective_rate']}/unit from {fin['effective_rate_source']}; fixed charge Rs {fin['fixed_charge']:.0f}/month stays after solar.",
-            f"Weather: PVGIS typical year for {p.city}; {p.outage_hours_per_day:g} h/day load-shedding; soiling loss 7%, total system losses ~15%.",
-        ],
+        "backup": {**bl, "outage_hours_per_day": p.outage_hours_per_day,
+                   "unserved_kwh_year": fin["annual"]["unserved_kwh"] if fin else None,
+                   "battery_usable_kwh": round(usable, 1),
+                   "hours_on_battery": round(usable / max(bl["running_kw"], 0.01), 1) if usable else 0,
+                   "works_in_outage": inv_type != "on_grid",
+                   "items": backup_items(req, inv_type, usable, batt_kw)},
+        "site": site, "reconciliation": recon, "reconciliation_prompts": reconciliation_prompts(recon),
+        "clipped_kwh": round(clipped),
+        "assumptions": assumptions,
         "unverified_specs": unverified,
         "versions": {"engine": ENGINE_VERSION, "regulatory": reg["version"], "appliances": appliances()["version"],
                      "generated": date.today().isoformat()},
     }
 
 
+MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+               "November", "December"]
+
+
+def reconciliation_prompts(recon: list[dict], threshold: int = 20) -> list[str]:
+    """Gentle prompts where answers and bill disagree by more than the threshold (PRD 9.4)."""
+    out = []
+    for r in sorted(recon, key=lambda r: -abs(r["diff_pct"] or 0))[:2]:
+        if r["diff_pct"] is None or abs(r["diff_pct"]) <= threshold:
+            continue
+        m = MONTH_NAMES[r["month"] - 1]
+        if r["diff_pct"] > 0:
+            out.append(f"Your bill shows about {r['bill_units']:,.0f} units in {m}, but your answers suggest about "
+                       f"{r['modelled_units']:,.0f}. Do the ACs run fewer hours than you said?")
+        else:
+            out.append(f"Your bill shows about {r['bill_units']:,.0f} units in {m}, but your answers suggest only about "
+                       f"{r['modelled_units']:,.0f}. Are there other appliances (geyser, iron, motor, extra AC) we missed?")
+    return out
+
+
+def backup_items(req: AuditRequest, inv_type: str, usable: float, batt_kw: float) -> list[dict]:
+    """What will and will not run during load-shedding (PRD 9.6)."""
+    a, p = appliances(), req.profile
+    items = []
+    if p.backup_fans:
+        items.append(("Fans", p.backup_fans, p.backup_fans * a["fan_kw"], 0.0))
+    if p.backup_lights:
+        items.append(("Lights", p.backup_lights, p.backup_lights * a["light_kw"], 0.0))
+    if p.backup_fridge:
+        items.append(("Fridge", 1, 0.15, a["fridge_surge_kw"]))
+    if p.backup_ac and p.acs:
+        ac = p.acs[0]
+        kind = "inverter" if ac.inverter else "non_inverter"
+        kw = ac.tons * a["ac_kw_per_ton"][kind]
+        items.append((f"{ac.tons:g}-ton AC", p.backup_ac, p.backup_ac * kw, kw * a["ac_surge_multiplier"][kind]))
+    if p.backup_motor:
+        m = p.motor_hp * a["motor_kw_per_hp"]
+        items.append((f"{p.motor_hp:g} HP water motor", 1, m, m * a["motor_surge_multiplier"]))
+    inv = req.system.inverter
+    limit = min(inv.rated_kw or 1e9, batt_kw if usable else 1e9)
+    surge_cap = inv.surge_kva or ((inv.rated_kw or 0) * 2) or 1e9
+    out, running = [], 0.0
+    for name, n, kw, surge in items:
+        row = {"name": name, "count": n, "kw": round(kw, 2)}
+        if inv_type == "on_grid":
+            out.append({**row, "runs": False, "reason": "On-grid inverter switches off in load-shedding"})
+        elif not usable:
+            out.append({**row, "runs": "day_only", "reason": "Only while the sun is up (no battery)"})
+        elif running + kw > limit:
+            out.append({**row, "runs": False, "reason": "Not enough inverter/battery power with the items above on"})
+        elif surge and running + kw + surge > surge_cap:
+            out.append({**row, "runs": False, "reason": "Start-up surge may trip the inverter"})
+        else:
+            running += kw
+            out.append({**row, "runs": True, "reason": f"About {usable / max(running, 0.01):.1f} h with everything above on"})
+    return out
+
+
 def battery_options(profile: Profile, bill: Bill | None, *, dc_kw: float, inverter_kw: float,
-                    sizes=(0, 5, 10, 15), cost_per_kwh: float = 55000) -> dict:
+                    sizes=(0, 5, 10, 15), cost_per_kwh: float = 55000, inverter_type: str = "on_grid") -> dict:
     """Journey 2: should I add a battery? Simulate a few usable sizes with a hybrid inverter."""
     idx, pv, load, outage, recon, _ = energy_model(profile, bill, dc_kw=dc_kw, ac_kw=inverter_kw, inverter_type="hybrid",
                                                    usable_kwh=0, batt_kw=0)
     rows = []
     for kwh in sizes:
         bkw = min(kwh * 0.5, inverter_kw) if kwh else 0
-        inv = "hybrid" if kwh else "on_grid"
+        inv = "hybrid" if kwh else inverter_type
         fin = financials(profile, bill, idx, pv, load, outage, inverter_type=inv, usable_kwh=kwh, batt_kw=bkw)
         rows.append({"usable_kwh": kwh, "savings_monthly": fin["savings_monthly"], "annual": fin["annual"],
                      "backup_hours": None})
@@ -151,5 +233,5 @@ def battery_options(profile: Profile, bill: Bill | None, *, dc_kw: float, invert
             if r["usable_kwh"] and r["extra_saving_monthly"] > 0 else None
         r["backup_hours"] = round(r["usable_kwh"] / bl_kw, 1)
     regime, _ = select_regime(profile)
-    return {"regime": regime, "options": rows, "backup_load_kw": round(bl_kw, 2), "cost_per_usable_kwh_assumed": cost_per_kwh,
+    return {"regime": regime, "existing_inverter_type": inverter_type, "needs_inverter_change": inverter_type == "on_grid", "options": rows, "backup_load_kw": round(bl_kw, 2), "cost_per_usable_kwh_assumed": cost_per_kwh,
             "note": "Battery cost per usable kWh is an indicative assumption; replace with your actual quote."}

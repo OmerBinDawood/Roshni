@@ -44,7 +44,7 @@ def build_load(profile: Profile, index: pd.DatetimeIndex, temp_air: np.ndarray) 
     return pd.Series(load, index=index, name="load_kw")
 
 
-def scale_to_bill(load: pd.Series, monthly_units: list[float]) -> tuple[pd.Series, list[dict]]:
+def scale_to_bill(load: pd.Series, monthly_units: list[float], bill_month: int | None = None) -> tuple[pd.Series, list[dict]]:
     """Scale the modelled profile month-by-month to the bill history (measured beats modelled).
 
     Bill history is oldest-first, last 12 months; we map it to calendar months ending with the
@@ -54,9 +54,9 @@ def scale_to_bill(load: pd.Series, monthly_units: list[float]) -> tuple[pd.Serie
         return load, []
     hist = monthly_units[-12:]
     modelled = load.groupby(load.index.month).sum()
-    # Assume last entry = most recent month (current calendar month - 1)
+    # Last entry = the bill's own month if known, else the previous calendar month
     from datetime import date
-    last_month = (date.today().month - 2) % 12 + 1
+    last_month = bill_month if bill_month and 1 <= bill_month <= 12 else (date.today().month - 2) % 12 + 1
     months = [((last_month - len(hist) + 1 + i - 1) % 12) + 1 for i in range(len(hist))]
     factors = {}
     recon = []

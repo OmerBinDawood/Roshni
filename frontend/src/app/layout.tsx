@@ -21,6 +21,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <LangProvider>
           <Header />
           <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-6">{children}</main>
+          <footer className="no-print border-t border-line text-sm text-muted">
+            <nav className="max-w-4xl mx-auto px-4 py-4 flex flex-wrap gap-x-4 gap-y-1 pb-20 sm:pb-4">
+              <a href="/audit">Check a quote</a><a href="/audit?mode=parts">Parts check</a><a href="/bill">Bill decoder</a>
+              <a href="/battery">Battery advisor</a><a href="/readiness">Readiness</a><a href="/learn">Learn</a>
+              <a href="/about">Independence &amp; privacy</a>
+            </nav>
+          </footer>
           <Suspense fallback={null}><Assistant /></Suspense>
         </LangProvider>
       </body>

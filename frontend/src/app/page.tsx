@@ -8,6 +8,8 @@ export default function Home() {
     { href: "/audit", icon: "🧾", title: t("checkQuote"), desc: t("checkQuoteD"), primary: true },
     { href: "/bill", icon: "💡", title: t("decodeBill"), desc: t("decodeBillD") },
     { href: "/battery", icon: "🔋", title: t("battery"), desc: t("batteryD") },
+    { href: "/audit?mode=parts", icon: "🧰", title: "Buying parts yourself?", desc: "Check that panels, inverter and battery work together safely before you buy." },
+    { href: "/readiness", icon: "🏠", title: "Is solar right for me yet?", desc: "A 2-minute check that can honestly say “not now”." },
     { href: "/learn", icon: "⚡", title: t("learn"), desc: t("learnD") },
   ];
   return (
@@ -28,7 +30,7 @@ export default function Home() {
       </section>
       <section className="text-sm text-muted border-t border-line pt-4 space-y-1">
         <p>Rules modelled: legacy net metering (agreements before 9 Feb 2026) and net billing (new users), fixed charges and the 200-unit protected limit. Figures are indicative and dated; verify against official NEPRA/DISCO notices.</p>
-        <p>{t("disclaimer")}</p>
+        <p>{t("disclaimer")} <a className="underline" href="/about">Our independence policy</a>.</p>
       </section>
     </div>
   );

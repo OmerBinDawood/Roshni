@@ -22,7 +22,7 @@ export interface Bill {
   phase?: "single" | "three" | null; current_units?: number | null; monthly_units_history: number[];
   total_amount_rs?: number | null; energy_charges_rs?: number | null; fixed_charges_rs?: number | null;
   fpa_rs?: number | null; taxes_rs?: number | null; protected?: boolean | null; net_metered?: boolean | null;
-  export_units?: number | null;
+  export_units?: number | null; bill_month?: number | null;
 }
 export type Spec = Record<string, string | number | boolean | null | undefined>;
 export interface SystemConfig {
@@ -34,18 +34,20 @@ export interface Profile {
   city: string; acs: AC[]; motor_hp: number; fridges: number; fans: number; lights: number;
   backup_fans: number; backup_lights: number; backup_fridge: boolean; backup_ac: number; backup_motor: boolean;
   outage_hours_per_day: number; goal: "bill" | "backup" | "both"; wants_backup: boolean;
-  net_metering_agreement_date?: string | null; phase?: "single" | "three" | null;
+  net_metering_agreement_date?: string | null; phase?: "single" | "three" | null; scale_to_bill: boolean;
 }
 export interface Finding {
   rule_id: string; severity: "CRITICAL" | "CLARIFY" | "INFO" | "OK"; title: string; detail: string;
   evidence: string; question: string; title_ur?: string; detail_ur?: string; question_ur?: string;
 }
 
+export interface Issue { line: number | null; level: "error" | "warn" | "info"; msg: string }
+
 export const defaultProfile: Profile = {
   city: "Lahore", acs: [{ count: 1, tons: 1.5, inverter: true, day_hours: 6, night_hours: 6 }],
   motor_hp: 1, fridges: 1, fans: 6, lights: 10, backup_fans: 3, backup_lights: 5, backup_fridge: true,
   backup_ac: 0, backup_motor: false, outage_hours_per_day: 4, goal: "both", wants_backup: true,
-  net_metering_agreement_date: null, phase: null,
+  net_metering_agreement_date: null, phase: null, scale_to_bill: true,
 };
 
 async function handle<T>(r: Response): Promise<T> {

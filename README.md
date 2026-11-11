@@ -19,9 +19,18 @@ copy-paste list of questions for your installer.
 | Quote audit rule catalogue R01–R25 (string voltage, MPPT limits, battery compatibility, backup, protection, warranty, savings claim vs regime, price…) | `backend/app/engine/rules.py` |
 | Financial model: regime selection, fixed charges, buyback, scenarios, "rules change again" stress test, 25-yr cash flow | `backend/app/engine/finance.py` |
 | Report with share link, Save-as-PDF (print), Urdu translation | `/report/[id]` |
+| Quote validator (qty × price, line totals vs grand total, missing model numbers) | confirm step, report |
+| Parts-list safety check for self-assemblers (Journey 3, no savings maths) | `/audit?mode=parts` |
+| Datasheet catalogue: fuzzy model matching, web lookups saved as *unverified*, admin review queue | `/admin` |
+| Bill-vs-answers reconciliation prompts; "what runs in load-shedding" per appliance | report |
+| Installer conversation kit (personal questions, checklist, red flags), outcome survey (north-star), report deletion | report |
 | "Should I add a battery?" advisor | `/battery` |
-| On-grid vs hybrid explainer, backup simulator, learning cards | `/learn` |
-| **Roshni Madadgar** assistant — Urdu/Roman Urdu/English, voice input and read-aloud | every page |
+| Solar readiness check ("not now" is a valid answer) | `/readiness` |
+| On-grid vs hybrid explainer, "which type fits me" quiz, backup simulator, 10 lessons with audio, glossary | `/learn` |
+| Independence policy, evidence standards, public rule list, privacy | `/about` |
+| **Roshni Madadgar** assistant — Urdu/Roman Urdu/English, voice input, read-aloud, photo/PDF attachments | every page |
+
+No WhatsApp integration (by design, PRD §20). Users paste copied chat text instead.
 
 ### Reused, not rebuilt
 
@@ -40,10 +49,12 @@ frontend/  Next.js 16 + Tailwind (mobile-first, RTL Urdu)  --/api/* rewrite-->  
                                                                                  ├─ app/engine/        (deterministic, versioned)
                                                                                  │   weather · pv · load · dispatch · finance · rules · audit
                                                                                  ├─ app/data/          (versioned regulatory, appliance, city data, knowledge base)
-                                                                                 └─ roshni.db          (SQLite: saved reports for share links)
+                                                                                 └─ app/db.py          (Supabase Postgres via DATABASE_URL, else local SQLite)
 ```
 
-Supabase (auth, RLS, storage) from the PRD is not wired in yet; SQLite keeps the MVP to two processes.
+Tables: `reports`, `datasheets` (catalogue + review queue), `decision_outcomes`. On Postgres, Row-Level Security is
+enabled with no policies, so Supabase's public REST API cannot read them; only the backend (postgres role) can.
+Supabase Auth (OTP sign-in to save history) is not wired in yet.
 
 ## Run locally
 
@@ -54,7 +65,7 @@ Requirements: Python 3.11+, Node 20+, a Gemini API key.
 cd backend
 python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt     # macOS/Linux: .venv/bin/pip
-cp .env.example .env                              # then put your GEMINI_API_KEY in .env
+cp .env.example .env                              # then fill GEMINI_API_KEY, DATABASE_URL, ADMIN_TOKEN
 .venv/Scripts/python -m uvicorn app.main:app --port 8000
 
 # Frontend (new terminal)
@@ -65,7 +76,11 @@ npm run dev                                       # http://localhost:3000
 
 Set `BACKEND_URL` for the frontend if the API is not on `http://127.0.0.1:8000`.
 
-Tests: `cd backend && .venv/Scripts/python -m pytest -q`
+Tests: `cd backend && .venv/Scripts/python -m pytest -q` (tests always use a throwaway SQLite database).
+
+For Supabase, use the **session pooler** connection string (IPv4), e.g.
+`postgresql://postgres.<project-ref>:<url-encoded-password>@aws-0-<region>.pooler.supabase.com:5432/postgres`.
+The direct `db.<ref>.supabase.co` host is IPv6-only and fails on many networks.
 
 ## Important caveats
 

@@ -32,6 +32,8 @@ class Quote(BaseModel):
     claimed_monthly_savings_rs: Optional[float] = None
     claimed_payback_years: Optional[float] = None
     savings_assumes_net_metering: Optional[bool] = None
+    panels_per_string: Optional[int] = Field(None, description="Only if the document states how many panels are wired in series per string")
+    strings_per_mppt: Optional[int] = Field(None, description="Only if the document states parallel strings per MPPT input")
     notes: Optional[str] = None
 
 
@@ -50,6 +52,7 @@ class Bill(BaseModel):
     protected: Optional[bool] = None
     net_metered: Optional[bool] = None
     export_units: Optional[float] = None
+    bill_month: Optional[int] = Field(None, description="Calendar month (1-12) of the billing month this bill is for")
 
 
 class PanelSpec(BaseModel):
@@ -129,6 +132,7 @@ class Profile(BaseModel):
     wants_backup: bool = True
     net_metering_agreement_date: Optional[str] = None  # ISO date, None = no agreement
     phase: Optional[Literal["single", "three"]] = None
+    scale_to_bill: bool = True  # user agrees to scale the modelled profile to bill history (PRD 10.2)
 
 
 class AuditRequest(BaseModel):
@@ -137,6 +141,7 @@ class AuditRequest(BaseModel):
     profile: Profile
     bill: Optional[Bill] = None
     language: Literal["en", "ur"] = "en"
+    mode: Literal["full", "parts"] = "full"  # "parts" = Journey 3 parts-list safety check, no savings modelling
 
 
 class Finding(BaseModel):

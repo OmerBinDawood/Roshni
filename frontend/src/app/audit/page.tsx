@@ -1,27 +1,44 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import FilePick from "@/components/FilePick";
 import ProfileForm from "@/components/ProfileForm";
-import { Button, Card, ErrorBox, Num } from "@/components/ui";
-import { api, defaultProfile, ITEM_TYPES, rs, type Bill, type LineItem, type Profile, type Quote, type Spec, type SystemConfig } from "@/lib/api";
+import { Button, Card, Consent, ErrorBox, Issues, Num } from "@/components/ui";
+import { api, defaultProfile, ITEM_TYPES, rs, type Bill, type Issue, type LineItem, type Profile, type Quote, type Spec, type SystemConfig } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 
-const STEPS = ["Quote", "Bill", "Home", "Confirm"];
+type Match = { kind: string; brand: string; model: string; match: number; verified: boolean };
 
 export default function AuditPage() {
   const { t } = useLang();
   const router = useRouter();
+  const params = useSearchParams();
+  const [mode, setMode] = useState<"full" | "parts">(params.get("mode") === "parts" ? "parts" : "full");
+  const steps = mode === "parts" ? ["Parts", "Home", "Confirm"] : ["Quote", "Bill", "Home", "Confirm"];
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [consent, setConsent] = useState(false);
   const [quoteFiles, setQuoteFiles] = useState<File[]>([]);
   const [quoteText, setQuoteText] = useState("");
   const [billFile, setBillFile] = useState<File[]>([]);
+  const [billWarnings, setBillWarnings] = useState<string[]>([]);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [system, setSystem] = useState<SystemConfig | null>(null);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [bill, setBill] = useState<Bill | null>(null);
   const [profile, setProfile] = useState<Profile>(defaultProfile);
+  const stepName = steps[step];
+
+  // Re-run the deterministic validator whenever the user edits the quote on the confirm step
+  useEffect(() => {
+    if (stepName !== "Confirm" || !quote) return;
+    const id = setTimeout(() => {
+      api.post<{ validation: Issue[] }>("/validate/quote", quote).then((r) => setIssues(r.validation)).catch(() => {});
+    }, 500);
+    return () => clearTimeout(id);
+  }, [quote, stepName]);
 
   async function run<T>(label: string, fn: () => Promise<T>): Promise<T | undefined> {
     setBusy(label); setError(null);
@@ -32,28 +49,48 @@ export default function AuditPage() {
     const fd = new FormData();
     quoteFiles.forEach((f) => fd.append("files", f));
     if (quoteText.trim()) fd.append("text", quoteText);
-    const r = await run("Reading your quote…", () => api.upload<{ quote: Quote; system: SystemConfig }>("/extract/quote", fd));
-    if (r) { setQuote(r.quote); setSystem(r.system); setStep(1); }
+    fd.append("consent", String(consent));
+    const r = await run("Reading…", () =>
+      api.upload<{ quote: Quote; system: SystemConfig; validation: Issue[]; catalogue_matches: Match[] }>("/extract/quote", fd));
+    if (r) { setQuote(r.quote); setSystem(r.system); setIssues(r.validation); setMatches(r.catalogue_matches); setStep(1); }
   }
 
   async function readBill() {
     const fd = new FormData();
     fd.append("file", billFile[0]);
-    const r = await run("Reading your bill…", () => api.upload<{ bill: Bill }>("/extract/bill", fd));
-    if (r) { setBill(r.bill); if (r.bill.phase) setProfile((p) => ({ ...p, phase: r.bill.phase })); }
+    fd.append("consent", String(consent));
+    const r = await run("Reading your bill…", () => api.upload<{ bill: Bill; warnings: string[] }>("/extract/bill", fd));
+    if (r) {
+      setBill(r.bill); setBillWarnings(r.warnings);
+      if (r.bill.phase) setProfile((p) => ({ ...p, phase: r.bill.phase }));
+      if (r.bill.net_metered) setProfile((p) => ({ ...p, net_metering_agreement_date: p.net_metering_agreement_date ?? "2025-01-01" }));
+    }
   }
 
   async function submit() {
     const r = await run("Simulating a full year, hour by hour…", () =>
-      api.post<{ id: string }>("/audit", { quote, system, profile, bill }));
+      api.post<{ id: string }>("/audit", { quote, system, profile, bill: mode === "parts" ? null : bill, mode }));
     if (r) router.push(`/report/${r.id}`);
   }
 
+  const canRead = consent && (quoteFiles.length > 0 || quoteText.trim().length > 0);
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold">{t("checkQuote")}</h1>
+      <h1 className="text-2xl font-bold">{mode === "parts" ? "Parts-list safety check" : t("checkQuote")}</h1>
+      {step === 0 && (
+        <div className="flex gap-2 text-sm" role="radiogroup" aria-label="What do you have?">
+          <button onClick={() => setMode("full")} className={`flex-1 rounded-xl border p-3 text-start ${mode === "full" ? "bg-sun/15 border-sun" : "border-line"}`}>
+            <div className="font-semibold">I have an installer&apos;s quote</div>
+            <div className="text-muted">Full check: safety, price, real savings, backup.</div>
+          </button>
+          <button onClick={() => setMode("parts")} className={`flex-1 rounded-xl border p-3 text-start ${mode === "parts" ? "bg-sun/15 border-sun" : "border-line"}`}>
+            <div className="font-semibold">I&apos;m buying parts myself</div>
+            <div className="text-muted">Will these parts work together safely? No savings maths.</div>
+          </button>
+        </div>
+      )}
       <ol className="flex gap-2 text-sm">
-        {STEPS.map((s, i) => (
+        {steps.map((s, i) => (
           <li key={s} className={`flex-1 text-center rounded-full py-1 border ${i === step ? "bg-sun/25 border-sun font-semibold" : i < step ? "border-leaf/40 text-leaf" : "border-line text-muted"}`}>
             {i + 1}. {s}
           </li>
@@ -63,54 +100,86 @@ export default function AuditPage() {
 
       {step === 0 && (
         <Card className="space-y-4">
-          <FilePick files={quoteFiles} onChange={setQuoteFiles} label="Upload your installer's quote" />
+          <FilePick files={quoteFiles} onChange={setQuoteFiles}
+            label={mode === "parts" ? "Photos of the parts, receipts or your parts list" : "Upload your installer's quote"} />
           <div>
-            <label>…or paste the quote text (e.g. a forwarded WhatsApp message)</label>
+            <label>{mode === "parts" ? "…or type/paste your parts list" : "…or paste the quote text (e.g. a copied chat message or email)"}</label>
             <textarea dir="auto" rows={5} value={quoteText} onChange={(e) => setQuoteText(e.target.value)}
-              placeholder={"10 x LONGi 585W A grade @ 23,400\n6kW Deye hybrid inverter 3.3 lakh\n5kWh lithium battery 2.8 lakh\nStructure, wiring, installation 85k"} />
+              placeholder={mode === "parts"
+                ? "12 x Jinko 580W\nGrowatt SPF 6000 ES Plus\n2 x Pylontech US5000"
+                : "10 x LONGi 585W A grade @ 23,400\n6kW Deye hybrid inverter 3.3 lakh\n5kWh lithium battery 2.8 lakh\nStructure, wiring, installation 85k"} />
           </div>
-          <Button onClick={readQuote} disabled={!!busy || (!quoteFiles.length && !quoteText.trim())}>{busy ?? `${t("next")} →`}</Button>
+          <Consent checked={consent} onChange={setConsent} />
+          <Button onClick={readQuote} disabled={!!busy || !canRead}>{busy ?? `${t("next")} →`}</Button>
         </Card>
       )}
 
-      {step === 1 && (
+      {stepName === "Bill" && (
         <Card className="space-y-4">
-          <p className="text-muted">Your latest electricity bill already shows 12 months of units. It lets Roshni use your real price per unit.</p>
+          <p className="text-muted">Your latest electricity bill already shows 12 months of units. It lets Roshni use your real price per unit.
+            (Bill reference-number lookup is not available yet; please upload a photo.)</p>
           {!bill && <FilePick files={billFile} onChange={setBillFile} multiple={false} label="Upload your latest electricity bill" />}
+          {!bill && !consent && <Consent checked={consent} onChange={setConsent} />}
           {!bill && (
             <div className="flex gap-2">
-              <Button onClick={readBill} disabled={!!busy || !billFile.length}>{busy ?? "Read bill"}</Button>
-              <Button variant="ghost" onClick={() => setStep(2)}>{t("skip")}</Button>
+              <Button variant="ghost" onClick={() => setStep(0)}>{t("back")}</Button>
+              <Button onClick={readBill} disabled={!!busy || !billFile.length || !consent}>{busy ?? "Read bill"}</Button>
+              <Button variant="ghost" onClick={() => setStep(step + 1)}>{t("skip")}</Button>
             </div>
           )}
+          {bill && <Issues issues={billWarnings.map((msg) => ({ level: "warn", msg }))} />}
           {bill && <BillEditor bill={bill} onChange={setBill} />}
-          {bill && <div className="flex gap-2"><Button variant="ghost" onClick={() => setStep(0)}>{t("back")}</Button><Button onClick={() => setStep(2)}>{t("next")} →</Button></div>}
+          {bill && (
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="ghost" onClick={() => setStep(0)}>{t("back")}</Button>
+              <Button variant="ghost" onClick={() => { setBill(null); setBillFile([]); }}>Use a different bill</Button>
+              <Button onClick={() => setStep(step + 1)}>{t("next")} →</Button>
+            </div>
+          )}
         </Card>
       )}
 
-      {step === 2 && (
+      {stepName === "Home" && (
         <Card className="space-y-4">
-          <ProfileForm value={profile} onChange={setProfile} />
-          <div className="flex gap-2"><Button variant="ghost" onClick={() => setStep(1)}>{t("back")}</Button><Button onClick={() => setStep(3)}>{t("next")} →</Button></div>
+          <ProfileForm value={profile} onChange={setProfile} showRegime={mode === "full"} />
+          {mode === "full" && bill?.monthly_units_history?.length ? (
+            <label className="!text-ink !text-sm flex items-center gap-2">
+              <input type="checkbox" className="w-4 h-4" checked={profile.scale_to_bill}
+                onChange={(e) => setProfile({ ...profile, scale_to_bill: e.target.checked })} />
+              Adjust my answers to match the 12 months on my bill (recommended: measured beats estimated)
+            </label>
+          ) : null}
+          <div className="flex gap-2"><Button variant="ghost" onClick={() => setStep(step - 1)}>{t("back")}</Button><Button onClick={() => setStep(step + 1)}>{t("next")} →</Button></div>
         </Card>
       )}
 
-      {step === 3 && quote && system && (
+      {stepName === "Confirm" && quote && system && (
         <div className="space-y-4">
           <Card className="space-y-3">
             <h2 className="font-semibold text-lg">Is this right?</h2>
-            <p className="text-sm text-muted">We read this from your quote. Fix anything wrong — nothing is checked until you confirm. Highlighted rows were hard to read.</p>
+            <p className="text-sm text-muted">We read this from your document. Fix anything wrong — nothing is checked until you confirm. Highlighted rows were hard to read.</p>
+            <Issues issues={issues} />
+            {matches.length > 0 && (
+              <p className="text-sm text-leaf">Found in Roshni&apos;s datasheet catalogue: {matches.map((m) => `${m.brand} ${m.model}${m.verified ? " (verified)" : " (unverified)"}`).join(", ")}.</p>
+            )}
             <ItemsEditor items={quote.line_items} onChange={(line_items) => setQuote({ ...quote, line_items })} />
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <Num label="Grand total (Rs)" value={quote.grand_total} onChange={(v) => setQuote({ ...quote, grand_total: v })} />
-              <Num label="Savings claimed (Rs/month)" value={quote.claimed_monthly_savings_rs} onChange={(v) => setQuote({ ...quote, claimed_monthly_savings_rs: v })} />
-              <div><label>Payment terms</label><input value={quote.payment_terms ?? ""} onChange={(e) => setQuote({ ...quote, payment_terms: e.target.value })} /></div>
-            </div>
+            {mode === "full" && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <Num label="Grand total (Rs)" value={quote.grand_total} onChange={(v) => setQuote({ ...quote, grand_total: v })} />
+                <Num label="Savings claimed (Rs/month)" value={quote.claimed_monthly_savings_rs} onChange={(v) => setQuote({ ...quote, claimed_monthly_savings_rs: v })} />
+                <div><label>Payment terms</label><input value={quote.payment_terms ?? ""} onChange={(e) => setQuote({ ...quote, payment_terms: e.target.value })} /></div>
+                <label className="!text-ink !text-sm flex items-center gap-2 col-span-2 sm:col-span-3">
+                  <input type="checkbox" className="w-4 h-4" checked={!!quote.savings_assumes_net_metering}
+                    onChange={(e) => setQuote({ ...quote, savings_assumes_net_metering: e.target.checked })} />
+                  The installer&apos;s savings assume 1:1 net metering (exported units offset imported units)
+                </label>
+              </div>
+            )}
           </Card>
           <SystemEditor system={system} onChange={setSystem} quote={quote} />
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => setStep(2)}>{t("back")}</Button>
-            <Button onClick={submit} disabled={!!busy}>{busy ?? "Check my quote"}</Button>
+            <Button variant="ghost" onClick={() => setStep(step - 1)}>{t("back")}</Button>
+            <Button onClick={submit} disabled={!!busy || (mode === "full" && !system.panel_count)}>{busy ?? (mode === "parts" ? "Check my parts" : "Check my quote")}</Button>
           </div>
         </div>
       )}
@@ -126,6 +195,16 @@ function BillEditor({ bill, onChange }: { bill: Bill; onChange: (b: Bill) => voi
         <Num label="Units this month" value={bill.current_units} onChange={(v) => onChange({ ...bill, current_units: v })} />
         <Num label="Total payable (Rs)" value={bill.total_amount_rs} onChange={(v) => onChange({ ...bill, total_amount_rs: v })} />
         <Num label="Fixed charges (Rs)" value={bill.fixed_charges_rs} onChange={(v) => onChange({ ...bill, fixed_charges_rs: v })} />
+        <div>
+          <label>Bill month</label>
+          <select value={bill.bill_month ?? ""} onChange={(e) => onChange({ ...bill, bill_month: e.target.value ? Number(e.target.value) : null })}>
+            <option value="">unknown</option>
+            {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+          </select>
+        </div>
+        <Num label="Energy charges (Rs)" value={bill.energy_charges_rs} onChange={(v) => onChange({ ...bill, energy_charges_rs: v })} />
+        <Num label="Export units (net-metered)" value={bill.export_units} onChange={(v) => onChange({ ...bill, export_units: v })} />
+        <Num label="Sanctioned load (kW)" step={0.5} value={bill.sanctioned_load_kw} onChange={(v) => onChange({ ...bill, sanctioned_load_kw: v })} />
       </div>
       <div>
         <label>Units in the last 12 months (oldest first, comma-separated)</label>

@@ -20,6 +20,8 @@ export default function Assistant() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [listening, setListening] = useState(false);
+  const [attach, setAttach] = useState<File | null>(null);
+  const [consent, setConsent] = useState(false);
   const recRef = useRef<SR | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -31,11 +33,24 @@ export default function Assistant() {
   }, []);
 
   async function send(text: string) {
-    if (!text.trim() || busy) return;
-    const next = [...msgs, { role: "user" as const, content: text }];
+    if ((!text.trim() && !attach) || busy) return;
+    if (attach && !consent) { alert("Please tick the box to agree to AI processing of the attachment."); return; }
+    const content = attach ? `📎 ${attach.name}${text.trim() ? " — " + text : ""}` : text;
+    const next = [...msgs, { role: "user" as const, content }];
     setMsgs(next); setInput(""); setBusy(true);
+    const file = attach; setAttach(null);
     try {
-      const r = await api.post<{ reply: string }>("/chat", { messages: next, report_id: reportId });
+      let r: { reply: string };
+      if (file) {
+        const fd = new FormData();
+        fd.append("messages", JSON.stringify(next));
+        if (reportId) fd.append("report_id", reportId);
+        fd.append("files", file);
+        fd.append("consent", "true");
+        r = await api.upload<{ reply: string }>("/chat/upload", fd);
+      } else {
+        r = await api.post<{ reply: string }>("/chat", { messages: next, report_id: reportId });
+      }
       setMsgs([...next, { role: "assistant", content: r.reply }]);
     } catch (e) {
       setMsgs([...next, { role: "assistant", content: `Sorry, something went wrong: ${(e as Error).message}` }]);
@@ -102,7 +117,16 @@ export default function Assistant() {
             {busy && <div className="text-muted">…</div>}
             <div ref={endRef} />
           </div>
+          {attach && (
+            <div className="px-3 pt-2 text-xs space-y-1 border-t border-line">
+              <div className="flex items-center justify-between"><span className="truncate">📎 {attach.name}</span><button onClick={() => setAttach(null)} className="text-bad">✕</button></div>
+              <label className="!text-ink !text-xs flex items-start gap-2"><input type="checkbox" className="w-3.5 h-3.5 mt-0.5" checked={consent} onChange={(e) => setConsent(e.target.checked)} />I agree this file is sent to Google Gemini to read it.</label>
+            </div>
+          )}
           <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="p-3 border-t border-line flex gap-2">
+            <label className="rounded-xl px-3 border border-line cursor-pointer flex items-center !mb-0 !text-base" aria-label="Attach a photo or PDF">📎
+              <input type="file" className="hidden" accept="image/*,application/pdf" onChange={(e) => { setAttach(e.target.files?.[0] ?? null); e.target.value = ""; }} />
+            </label>
             <button type="button" onClick={toggleMic} aria-label="Voice input"
               className={`rounded-xl px-3 border border-line ${listening ? "bg-bad/20" : ""}`}>{listening ? "■" : "🎤"}</button>
             <input dir="auto" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Yeh kWp kya hota hai?" />

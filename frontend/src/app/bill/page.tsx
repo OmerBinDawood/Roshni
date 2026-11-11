@@ -1,23 +1,24 @@
 "use client";
 import { useState } from "react";
 import FilePick from "@/components/FilePick";
-import { Button, Card, ErrorBox } from "@/components/ui";
+import { Button, Card, Consent, ErrorBox, Issues } from "@/components/ui";
 import { api, rs, type Bill } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 
 type Line = { label: string; amount_rs: number | null; explanation_en: string; explanation_ur: string; solar_can_reduce: "yes" | "partly" | "no" };
-type Decoded = { bill: Bill; lines: Line[]; protected_threshold: number; units_to_threshold: number | null; rules_as_of: string };
+type Decoded = { bill: Bill; lines: Line[]; protected_threshold: number; units_to_threshold: number | null; rules_as_of: string; warnings: string[] };
 
 export default function BillPage() {
   const { lang, t } = useLang();
   const [files, setFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [d, setD] = useState<Decoded | null>(null);
 
   async function decode() {
     setBusy(true); setError(null);
-    const fd = new FormData(); fd.append("file", files[0]);
+    const fd = new FormData(); fd.append("file", files[0]); fd.append("consent", String(consent));
     try { setD(await api.upload<Decoded>("/extract/bill", fd)); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -32,11 +33,13 @@ export default function BillPage() {
         <Card className="space-y-3">
           <FilePick files={files} onChange={setFiles} multiple={false} label="Upload a photo or PDF of your electricity bill" />
           <p className="text-xs text-muted">Your name, address and reference number are not stored or shown.</p>
-          <Button onClick={decode} disabled={busy || !files.length}>{busy ? t("working") : "Explain my bill"}</Button>
+          <Consent checked={consent} onChange={setConsent} />
+          <Button onClick={decode} disabled={busy || !files.length || !consent}>{busy ? t("working") : "Explain my bill"}</Button>
         </Card>
       )}
       {d && b && (
         <>
+          <Issues issues={(d.warnings ?? []).map((msg) => ({ level: "warn", msg }))} />
           <div className="grid sm:grid-cols-3 gap-3">
             <Card><div className="text-sm text-muted">This month</div><div className="text-2xl font-bold">{b.current_units ?? "–"} units</div><div className="text-sm text-muted">{b.provider} · {b.tariff_category}</div></Card>
             <Card><div className="text-sm text-muted">Total payable</div><div className="text-2xl font-bold">{rs(b.total_amount_rs)}</div>
