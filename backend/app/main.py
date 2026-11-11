@@ -486,6 +486,46 @@ def admin_insights(x_admin_token: Optional[str] = Header(default=None)):
     return db.outcome_insights()
 
 
+# ---------- email-only sign-in (no code). Enabled with EMAIL_ONLY_SIGNIN=1; see docs/RUN_GUIDE.md for the trade-off ----------
+_signin_hits: dict[str, list[float]] = {}
+
+
+class EmailSignin(BaseModel):
+    email: str = Field(max_length=200)
+
+
+@app.post("/api/auth/email-signin")
+def email_signin(r: EmailSignin, request: Request):
+    import time
+
+    import httpx
+
+    if os.getenv("EMAIL_ONLY_SIGNIN", "").lower() not in ("1", "true", "yes"):
+        raise HTTPException(404, "Email-only sign-in is not enabled.")
+    email = r.email.strip().lower()
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        raise HTTPException(400, "Enter a valid email address.")
+    ip = request.client.host if request.client else "anon"
+    now = time.time()
+    hits = [t for t in _signin_hits.get(ip, []) if now - t < 600]
+    if len(hits) >= 15:
+        raise HTTPException(429, "Too many sign-in attempts. Try again in a few minutes.")
+    _signin_hits[ip] = hits + [now]
+    url, secret, pub = os.getenv("SUPABASE_URL", "").rstrip("/"), os.getenv("SUPABASE_SECRET_KEY"), os.getenv("SUPABASE_PUBLISHABLE_KEY")
+    if not (url and secret and pub):
+        raise HTTPException(503, "Sign-in is not configured on this server.")
+    try:
+        link = httpx.post(url + "/auth/v1/admin/generate_link", headers={"apikey": secret, "Authorization": "Bearer " + secret},
+                          json={"type": "magiclink", "email": email}, timeout=20).json()
+        sess = httpx.post(url + "/auth/v1/verify", headers={"apikey": pub},
+                          json={"type": "magiclink", "token_hash": link["hashed_token"]}, timeout=20).json()
+    except Exception:
+        raise HTTPException(502, "Could not sign you in right now. Please try again.")
+    if "access_token" not in sess:
+        raise HTTPException(502, "Could not sign you in right now. Please try again.")
+    return {"access_token": sess["access_token"], "refresh_token": sess["refresh_token"]}
+
+
 # ---------- saved household profile (signed-in users) ----------
 @app.get("/api/me/profile")
 def my_profile(user: dict = Depends(required_user)):

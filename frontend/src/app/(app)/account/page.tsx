@@ -15,8 +15,6 @@ export default function Account() {
   const { session, ready } = useSession();
   const sb = supabase();
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -28,21 +26,14 @@ export default function Account() {
   }, []);
   useEffect(() => { if (session) queueMicrotask(load); }, [session, load]);
 
-  async function sendCode() {
+  async function signIn() {
     if (!sb) return;
     setBusy(true); setError(null);
-    const { error } = await sb.auth.signInWithOtp({
-      email: email.trim(), options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/account` },
-    });
-    setBusy(false);
-    if (error) setError(error.message); else setSent(true);
-  }
-  async function verify() {
-    if (!sb) return;
-    setBusy(true); setError(null);
-    const { error } = await sb.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
-    setBusy(false);
-    if (error) setError(error.message);
+    try {
+      const t = await api.post<{ access_token: string; refresh_token: string }>("/auth/email-signin", { email: email.trim() });
+      const { error } = await sb.auth.setSession(t);
+      if (error) setError(error.message);
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   async function deleteAll() {
     if (!confirm("Delete ALL your saved reports and sizings permanently? Their share links will stop working. This cannot be undone.")) return;
@@ -56,26 +47,13 @@ export default function Account() {
     return (
       <div className="space-y-5 max-w-md">
         <h1 className="text-2xl font-bold">Sign in to save your reports</h1>
-        <p className="text-muted">No password needed. We email you a sign-in code. You don&apos;t need an account to check a quote — signing in only keeps your history so you can compare quotes later.</p>
+        <p className="text-muted">Just enter your email. You don&apos;t need an account to check a quote — signing in only keeps your history so you can compare quotes later.</p>
         <ErrorBox error={error} />
         <Card className="space-y-3">
-          {!sent ? (
-            <>
-              <div><label htmlFor="email">Email</label>
-                <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" /></div>
-              <Button onClick={sendCode} disabled={busy || !/^\S+@\S+\.\S+$/.test(email)}>{busy ? "Sending…" : "Email me a sign-in code"}</Button>
-            </>
-          ) : (
-            <>
-              <p className="text-sm">We sent an email to <b>{email}</b>. Click the link in it, or type the code here.</p>
-              <div><label htmlFor="code">Code from the email</label>
-                <input id="code" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} placeholder="123456" /></div>
-              <div className="flex gap-2">
-                <Button onClick={verify} disabled={busy || code.length < 6}>{busy ? "Checking…" : "Sign in"}</Button>
-                <Button variant="ghost" onClick={() => { setSent(false); setCode(""); }}>Use a different email</Button>
-              </div>
-            </>
-          )}
+          <div><label htmlFor="email">Your email</label>
+            <input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && /^\S+@\S+\.\S+$/.test(email)) signIn(); }} placeholder="you@example.com" /></div>
+          <Button onClick={signIn} disabled={busy || !/^\S+@\S+\.\S+$/.test(email)}>{busy ? "Signing in…" : "Continue"}</Button>
+          <p className="text-xs text-muted">No code needed. Use the same email each time to see your saved reports on any device.</p>
         </Card>
         <p className="text-xs text-muted">Sign-in is provided by Supabase. We only store your email and your reports. <Link className="underline" href="/about#privacy">Privacy</Link></p>
       </div>
