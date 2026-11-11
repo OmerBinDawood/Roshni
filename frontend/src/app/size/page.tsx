@@ -11,14 +11,20 @@ type Option = {
   savings_monthly: { low: number; expected: number; high: number }; payback_years: number | null; export_share: number;
   backup_hours: number; backup_load_kw: number; works_in_outage: boolean; within_budget: boolean; why: string[];
 };
-type BrandRow = { id: string; name: string; kind: string; origin: string; about: string; pakistan: string; verify?: { label: string; url: string } | null };
+type Price = { category: string; product: string; unit: string; low: number; high: number; as_of: string | null; confidence: string; source: string; note?: string; kw?: number | null; kwh?: number | null };
+type BrandRow = { id: string; name: string; kind: string; origin: string; about: string; pakistan: string; verify?: { label: string; url: string } | null; prices: Price[] };
+type EstPart = { low: number; high: number; basis: string; product?: string; as_of?: string | null; source?: string; confidence?: string; why?: string };
+type Est = { parts: Record<string, EstPart>; total: { low: number; high: number }; notes: string[]; from_listings: string[]; disclaimer: string; budget_rs?: number; budget_verdict?: "within" | "maybe" | "over" };
 type Out = {
   summary: { annual_load_kwh: number; avg_monthly_units: number; daytime_share: number | null; bill_today_monthly_rs: number; effective_rate_rs: number;
     regime_label: string; roof_limit_kw: number | null };
   options: Option[]; brand_options: Record<string, { label: string; checks: string[]; brands: BrandRow[] }>;
   cost_note: string; prices_as_of: string; next: string; policy: string; assumptions: string[];
+  price_disclaimer: string; price_as_of: string; market_notes: { text: string; source: string; as_of: string }[];
 };
 const PART_LABEL: Record<string, string> = { panels: "Panels", inverter: "Inverter", battery: "Battery", structure_install: "Structure, wiring, installation" };
+const priceText = (p: Price) => p.unit === "per_w"
+  ? `Rs ${p.low}${p.high !== p.low ? `–${p.high}` : ""} per watt` : `${rs(p.low)}${p.high !== p.low ? `–${rs(p.high)}` : ""}`;
 const lakh = (n: number) => `Rs ${(n / 100000).toFixed(n >= 1000000 ? 1 : 2)} lakh`;
 
 export default function SizePage() {
@@ -34,6 +40,9 @@ export default function SizePage() {
   const [cat, setCat] = useState("panel");
   const [kind, setKind] = useState<"all" | "international" | "pakistan-market">("all");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [optIdx, setOptIdx] = useState(0);
+  const [pick, setPick] = useState<{ panel: string; inverter: string; battery_lithium: string }>({ panel: "", inverter: "", battery_lithium: "" });
+  const [est, setEst] = useState<Est | null>(null);
 
   useEffect(() => { queueMicrotask(() => setBill(savedBill.get())); }, []);
 
@@ -43,9 +52,17 @@ export default function SizePage() {
     const useBill = units.length ? ({ monthly_units_history: units, current_units: units[units.length - 1] } as Bill) : bill;
     try {
       const r = await api.post<Out>("/size", { profile: { ...profile, goal }, bill: useBill, budget_rs: budgetLakh ? budgetLakh * 100000 : null, roof_area_sqft: roof, goal });
-      setOut(r); setCat(Object.keys(r.brand_options)[0]);
+      setOut(r); setCat(Object.keys(r.brand_options)[0]); setOptIdx(0); setEst(null);
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
+
+  useEffect(() => {
+    const o = out?.options[optIdx];
+    if (!out || !o) return;
+    api.post<Est>("/size/estimate", { dc_kw: o.dc_kw, inverter_kw: o.inverter_kw, inverter_type: o.inverter_type, battery_kwh: o.battery_kwh,
+      panel_brand: pick.panel || null, inverter_brand: pick.inverter || null, battery_brand: pick.battery_lithium || null,
+      budget_rs: budgetLakh ? budgetLakh * 100000 : null }).then(setEst).catch(() => setEst(null));
+  }, [out, optIdx, pick, budgetLakh]);
 
   const grp = out?.brand_options[cat];
   const shown = (grp?.brands ?? []).filter((b) => (kind === "all" || b.kind === kind) && (!verifiedOnly || b.verify));
@@ -118,7 +135,9 @@ export default function SizePage() {
 
           <Card className="space-y-3">
             <h2 className="font-semibold text-lg">Brands you will meet for each part</h2>
-            <p className="text-sm text-muted">{out.policy} Listed alphabetically. Roshni does not score brands or track per-brand prices (dealer prices change weekly); compare exact models and written quotes instead.</p>
+            <p className="text-sm text-muted">{out.policy} Listed alphabetically. Roshni does not score brands. Prices below are public dealer listings collected on {out.price_as_of}; they change weekly, so compare exact models and written quotes.</p>
+            <p className="rounded-xl bg-warn/10 text-warn text-sm p-3"><b>Re-verify every price before you pay.</b> {out.price_disclaimer}</p>
+            {out.market_notes.map((m) => <p key={m.source} className="text-xs text-muted">{m.as_of}: {m.text} <a className="underline" href={m.source} target="_blank" rel="noreferrer">source</a></p>)}
             <div className="flex flex-wrap gap-2" role="tablist">
               {Object.entries(out.brand_options).map(([k, v]) => (
                 <button key={k} role="tab" aria-selected={cat === k} onClick={() => setCat(k)}
@@ -144,11 +163,55 @@ export default function SizePage() {
                   <div className="font-medium"><a className="underline" href={`/brands#${b.id}`}>{b.name}</a> <span className="text-muted font-normal">· {b.origin}</span></div>
                   <p className="text-muted">{b.about}</p>
                   <p>{b.pakistan}</p>
+                  {b.prices.length > 0 ? (
+                    <ul className="mt-1 rounded-lg bg-sun/10 px-2 py-1 text-xs space-y-0.5">
+                      {b.prices.map((p) => (
+                        <li key={p.product}><b>{priceText(p)}</b> · {p.product} · {p.as_of ? `listed ${p.as_of}` : "undated"} ({p.confidence}) · <a className="underline" href={p.source} target="_blank" rel="noreferrer">source</a>{p.note ? ` · ${p.note}` : ""}</li>
+                      ))}
+                    </ul>
+                  ) : <p className="text-xs text-muted">No public price listing found for this brand.</p>}
                   {b.verify?.url && <p><a className="underline text-leaf" href={b.verify.url} target="_blank" rel="noreferrer">{b.verify.label}</a></p>}
                 </li>
               ))}
               {shown.length === 0 && <li className="py-3 text-muted text-sm">No brands match these filters.</li>}
             </ul>
+          </Card>
+
+          <Card className="space-y-3">
+            <h2 className="font-semibold text-lg">Build your own estimate with brands</h2>
+            <p className="text-sm text-muted">Pick one of the options above and the brands you are considering. Roshni uses each brand&apos;s public listing where one exists and market ranges for the rest. This is an estimate to prepare for quotes, not a price.</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div><label htmlFor="est-opt">System</label>
+                <select id="est-opt" value={optIdx} onChange={(e) => setOptIdx(Number(e.target.value))}>
+                  {out.options.map((o, i) => <option key={o.name} value={i}>{o.name}: {o.dc_kw} kW{o.battery_kwh ? ` + ${o.battery_kwh} kWh` : ""}</option>)}
+                </select></div>
+              {(["panel", "inverter", "battery_lithium"] as const).filter((k) => out.brand_options[k]).filter((k) => k !== "battery_lithium" || out.options[optIdx]?.battery_kwh).map((k) => (
+                <div key={k}><label htmlFor={`est-${k}`}>{out.brand_options[k].label} brand</label>
+                  <select id={`est-${k}`} value={pick[k]} onChange={(e) => setPick({ ...pick, [k]: e.target.value })}>
+                    <option value="">Not decided (market range)</option>
+                    {out.brand_options[k].brands.map((b) => <option key={b.id} value={b.id}>{b.name}{b.prices.some((p) => p.category === k) ? "" : " (no price listed)"}</option>)}
+                  </select></div>
+              ))}
+            </div>
+            {est && (
+              <div className="space-y-2">
+                <table className="w-full text-sm">
+                  <thead><tr className="text-muted"><th className="text-start py-1">Part</th><th className="text-start">Estimate</th><th className="text-start">Based on</th></tr></thead>
+                  <tbody>{Object.entries(est.parts).map(([k, p]) => (
+                    <tr key={k} className="border-t border-line align-top"><td className="py-1">{PART_LABEL[k] ?? k}</td><td>{rs(p.low)}–{rs(p.high)}</td>
+                      <td className="text-xs text-muted">{p.basis === "brand listing" ? <>{p.product} · {p.as_of ? `listed ${p.as_of}` : "undated"} · <a className="underline" href={p.source} target="_blank" rel="noreferrer">source</a></> : `Market range (${p.why})`}</td></tr>
+                  ))}</tbody>
+                </table>
+                <div className="text-lg font-bold">Total about {rs(est.total.low)}–{rs(est.total.high)}</div>
+                {est.budget_verdict && (
+                  <p className={`text-sm ${est.budget_verdict === "within" ? "text-leaf" : est.budget_verdict === "maybe" ? "text-warn" : "text-bad"}`}>
+                    {est.budget_verdict === "within" ? "Within your budget." : est.budget_verdict === "maybe" ? "The low end fits your budget, the high end does not." : "Above your budget; try a smaller option or a cheaper battery."}
+                  </p>
+                )}
+                {est.notes.map((n) => <p key={n} className="text-xs text-muted">{n}</p>)}
+                <p className="text-xs text-warn">Approval and meter fees are extra. Re-verify prices, grade and warranty with the seller in writing before paying.</p>
+              </div>
+            )}
           </Card>
 
           <Card className="space-y-2">

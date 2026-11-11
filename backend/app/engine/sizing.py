@@ -167,17 +167,88 @@ def size_solar(req: SizeReq) -> dict:
     brand_options = {
         cat: {"label": brands.CATEGORY_LABELS[cat], "checks": g["category_checks"].get(cat, []),
               "brands": sorted(({"id": b["id"], "name": b["name"], "kind": b["kind"], "origin": b["origin"], "about": b["about"],
-                                 "pakistan": b["pakistan"], "verify": b.get("verify")} for b in g["brands"] if cat in b["categories"]),
+                                 "pakistan": b["pakistan"], "verify": b.get("verify"), "prices": brands.prices_for(b["id"], cat)}
+                                for b in g["brands"] if cat in b["categories"]),
                                key=lambda b: b["name"].lower())}
         for cat in needed}
     return {
         "summary": summary, "options": options, "brand_options": brand_options,
         "cost_note": regulatory()["sizing_costs"]["note"], "prices_as_of": regulatory()["sizing_costs"]["as_of"],
         "next": "Ask 2 or 3 installers for quotes with exact brands and models, then check each one with Roshni's quote check.",
-        "policy": g["policy"],
+        "policy": g["policy"], "price_disclaimer": brands.price_data()["disclaimer"], "price_as_of": brands.price_data()["as_of"],
+        "market_notes": brands.price_data()["market_notes"],
         "assumptions": [
             "Costs are component ranges (panels, inverter, battery, structure and installation); approval and meter fees are extra.",
             "Payback is simple (cost midpoint divided by yearly saving); the full report adds inverter and battery replacements.",
             f"Savings use the {summary['regime_label']} rules and your tariff; they are estimates, not promises.",
         ],
     }
+
+
+class EstimateReq(BaseModel):
+    dc_kw: float = Field(gt=0, le=100)
+    inverter_kw: float = Field(gt=0, le=100)
+    inverter_type: Literal["on_grid", "hybrid"] = "hybrid"
+    battery_kwh: float = Field(0, ge=0, le=200)
+    panel_brand: Optional[str] = Field(None, max_length=40)
+    inverter_brand: Optional[str] = Field(None, max_length=40)
+    battery_brand: Optional[str] = Field(None, max_length=40)
+    budget_rs: Optional[float] = Field(None, gt=0, le=100_000_000)
+
+
+def _price_row(brand_id: str | None, category: str):
+    """The brand's usable listing for a category (needs a stated size to scale from), or None."""
+    for r in brands.prices_for(brand_id, category) if brand_id else []:
+        if category == "panel" or (category == "inverter" and r.get("kw")) or (category == "battery_lithium" and r.get("kwh")):
+            return r
+    return None
+
+
+def estimate_with_brands(r: EstimateReq) -> dict:
+    """Total cost for a chosen system using the picked brands' public listings where they exist, market ranges elsewhere."""
+    base = cost_range(r.inverter_type, r.dc_kw, r.inverter_kw, r.battery_kwh)["parts"]
+    parts, notes = {}, []
+
+    def market(name, why):
+        parts[name] = {"low": base[name]["low"], "high": base[name]["high"], "basis": "market range", "why": why}
+
+    row = _price_row(r.panel_brand, "panel")
+    if row:
+        parts["panels"] = {"low": round(r.dc_kw * 1000 * row["low"], -3), "high": round(r.dc_kw * 1000 * row["high"], -3),
+                           "basis": "brand listing", "product": row["product"], "as_of": row["as_of"], "source": row["source"],
+                           "confidence": row["confidence"]}
+    else:
+        market("panels", "no panel brand picked or no listing found" if r.panel_brand else "no panel brand picked")
+
+    row = _price_row(r.inverter_brand, "inverter")
+    if row and r.inverter_type == "hybrid":
+        scale = max(1.0, r.inverter_kw / row["kw"])  # small systems still need the listed model; larger ones scale up
+        parts["inverter"] = {"low": round(row["low"] * scale, -3), "high": round(row["high"] * scale, -3), "basis": "brand listing",
+                             "product": row["product"], "as_of": row["as_of"], "source": row["source"], "confidence": row["confidence"]}
+        if scale > 1.01:
+            notes.append(f"Inverter price is scaled up from the {row['kw']:g} kW listing to {r.inverter_kw:g} kW; real prices do not scale exactly.")
+        elif r.inverter_kw < row["kw"] - 0.01:
+            notes.append(f"Priced as the {row['kw']:g} kW model; a smaller model may cost less.")
+    else:
+        market("inverter", "on-grid inverter prices were not collected per brand" if (row and r.inverter_type == "on_grid")
+               else ("no listing found for that brand" if r.inverter_brand else "no inverter brand picked"))
+
+    if r.battery_kwh:
+        row = _price_row(r.battery_brand, "battery_lithium")
+        if row:
+            per_kwh = 1 / row["kwh"]
+            parts["battery"] = {"low": round(row["low"] * per_kwh * r.battery_kwh, -3), "high": round(row["high"] * per_kwh * r.battery_kwh, -3),
+                                "basis": "brand listing", "product": row["product"], "as_of": row["as_of"], "source": row["source"],
+                                "confidence": row["confidence"]}
+        else:
+            market("battery", "no listing found for that brand" if r.battery_brand else "no battery brand picked")
+    market("structure_install", "installation is not brand specific")
+
+    low, high = sum(p["low"] for p in parts.values()), sum(p["high"] for p in parts.values())
+    out = {"parts": parts, "total": {"low": low, "high": high}, "notes": notes,
+           "from_listings": [k for k, p in parts.items() if p["basis"] == "brand listing"],
+           "disclaimer": brands.price_data()["disclaimer"], "price_as_of": brands.price_data()["as_of"]}
+    if r.budget_rs:
+        out["budget_rs"] = r.budget_rs
+        out["budget_verdict"] = "within" if high <= r.budget_rs else ("maybe" if low <= r.budget_rs else "over")
+    return out

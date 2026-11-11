@@ -1,0 +1,85 @@
+{
+  "version": "2026-11-11",
+  "as_of": "2026-11-11",
+  "disclaimer": "Prices are public retailer listings and price guides collected on the date above, not quotes and not verified with the brands. Dealer prices in Pakistan move weekly with the dollar rate and supply, differ by city, and may or may not include GST, delivery and warranty terms. Always re-verify the exact model, price, grade and warranty with the seller in writing before you pay. Brands with no entry had no usable public listing in our search.",
+  "market_notes": [
+    {"text": "Karachi dealers were quoting about Rs 37 per watt on average in early November 2026, with some rates near Rs 40 or lower.", "source": "https://bolnews.com/business/solar-panel-prices-decrease-in-pakistan", "as_of": "2026-11-03"},
+    {"text": "A report on 7 Nov 2026 claims a new low of Rs 28 per watt; this is far from other sources and is not confirmed.", "source": "https://www.bolnews.com/business/solar-battery-prices-drop-in-pakistan-check-latest-rates-for-lithium-tubular-batteries", "as_of": "2026-11-07"}
+  ],
+  "prices": {
+    "longi": [
+      {"category": "panel", "product": "Hi-MO X10 and similar premium panels", "unit": "per_w", "low": 41, "high": 46, "as_of": null, "confidence": "price guide", "source": "https://maxpower.com.pk/news/solar-panel-inverter-prices-pakistan-2026/"}
+    ],
+    "jinko": [
+      {"category": "panel", "product": "585 W mono-facial and bifacial N-type", "unit": "per_w", "low": 43.5, "high": 50, "as_of": null, "confidence": "price guide", "source": "https://www.phoneworld.com.pk/solar-panel-price-in-pakistan-today-updated-rates/", "note": "Rs 43.5 per watt mono-facial; Rs 44.5 to 50 bifacial."}
+    ],
+    "ja-solar": [
+      {"category": "panel", "product": "585 W bifacial N-type", "unit": "per_w", "low": 42, "high": 46, "as_of": null, "confidence": "price guide", "source": "https://www.phoneworld.com.pk/solar-panel-price-in-pakistan-today-updated-rates/"}
+    ],
+    "canadian-solar": [
+      {"category": "panel", "product": "TOPCon", "unit": "per_w", "low": 42.5, "high": 42.5, "as_of": "2026-07-15", "confidence": "price tracker", "source": "https://www.toolsfluent.com/tools/solar-panel-price-tracker-pakistan", "note": "Older than November; no newer figure found."}
+    ],
+    "trina": [
+      {"category": "panel", "product": "N-type", "unit": "per_w", "low": 40, "high": 42.8, "as_of": null, "confidence": "price guide", "source": "https://www.phoneworld.com.pk/solar-panel-price-in-pakistan-today-updated-rates/"}
+    ],
+    "aiko": [
+      {"category": "panel", "product": "Stellar A-grade N-type (585 W about Rs 24,000 to 25,100)", "unit": "per_w", "low": 41, "high": 42.9, "as_of": "2026-10-08", "confidence": "dated listing", "source": "https://www.zell.pk/solar-panel-price-in-pakistan", "note": "In-stock A-grade rates for Karachi and Lahore, week of 6 to 8 October 2026."}
+    ],
+    "astronergy": [
+      {"category": "panel", "product": "N-type", "unit": "per_w", "low": 40, "high": 45.5, "as_of": null, "confidence": "price guide", "source": "https://www.phoneworld.com.pk/solar-panel-price-in-pakistan-today-updated-rates/", "note": "Guide appears several months old."}
+    ],
+    "risen": [
+      {"category": "panel", "product": "HJT bifacial", "unit": "per_w", "low": 41.75, "high": 41.75, "as_of": null, "confidence": "price guide", "source": "https://www.phoneworld.com.pk/solar-panel-price-in-pakistan-today-updated-rates/", "note": "Another retailer guide gives Rs 28 to 36 per watt; sources disagree."}
+    ],
+    "crown": [
+      {"category": "panel", "product": "N-type", "unit": "per_w", "low": 40, "high": 40.25, "as_of": null, "confidence": "price guide", "source": "https://www.phoneworld.com.pk/solar-panel-price-in-pakistan-today-updated-rates/", "note": "Guide appears several months old."}
+    ],
+    "inverex": [
+      {"category": "panel", "product": "N-type / HJT", "unit": "per_w", "low": 43, "high": 43, "as_of": "2026-10-08", "confidence": "dated listing", "source": "https://www.zell.pk/solar-panel-price-in-pakistan"},
+      {"category": "inverter", "product": "Nitrox 6 kW 48 V single-phase hybrid", "unit": "per_item", "kw": 6, "low": 266000, "high": 266000, "as_of": "2026-07-14", "confidence": "dated listing", "source": "https://w11stop.com/hybrid-inverter/inverex-nitrox-6kw-hybrid-solar-inverter", "note": "Nitrox 6.6 kW listed at Rs 276,000 on 20 Jul 2026. One guide quotes Rs 430,000 to 470,000, likely with packages."}
+    ],
+    "solis": [
+      {"category": "inverter", "product": "6 kW LV single-phase hybrid", "unit": "per_item", "kw": 6, "low": 197000, "high": 233000, "as_of": null, "confidence": "undated listing", "source": "https://w11stop.com/single-phase-hybrid-solar-inverters"}
+    ],
+    "growatt": [
+      {"category": "inverter", "product": "SPH6000 6 kW hybrid", "unit": "per_item", "kw": 6, "low": 250000, "high": 250000, "as_of": null, "confidence": "undated listing", "source": "https://w11stop.com/hybrid-inverter"}
+    ],
+    "huawei": [
+      {"category": "inverter", "product": "Solar inverters, starting price (model not stated)", "unit": "per_item", "kw": null, "low": 350000, "high": 350000, "as_of": null, "confidence": "retailer brand page", "source": "https://powerhouseexpress.com.pk/collections/solar-inverters", "note": "Not enough detail to use in estimates."}
+    ],
+    "sungrow": [
+      {"category": "inverter", "product": "Hybrid 6 kW single-phase", "unit": "per_item", "kw": 6, "low": 200000, "high": 275000, "as_of": null, "confidence": "undated listing", "source": "https://powerhouseexpress.com.pk/products/sungrow-hybrid-6kw-single-phase-inverter", "note": "One retailer shows it out of stock."}
+    ],
+    "knox": [
+      {"category": "inverter", "product": "Krypton 6.5 kW hybrid", "unit": "per_item", "kw": 6.5, "low": 165000, "high": 165000, "as_of": null, "confidence": "undated listing", "source": "https://w11stop.com/hybrid-inverter"}
+    ],
+    "goodwe": [
+      {"category": "inverter", "product": "6 kW IP65 single-phase hybrid", "unit": "per_item", "kw": 6, "low": 185000, "high": 225000, "as_of": "2026-10-22", "confidence": "dated listing", "source": "https://w11stop.com/goodwe"}
+    ],
+    "fox-ess": [
+      {"category": "inverter", "product": "H1-4.6-E 5 kW single-phase hybrid", "unit": "per_item", "kw": 5, "low": 175000, "high": 175000, "as_of": null, "confidence": "undated listing", "source": "https://w11stop.com/hybrid-inverter", "note": "KH7 7 kW hybrid listed at Rs 230,000."}
+    ],
+    "fronus": [
+      {"category": "inverter", "product": "Matrix 6 kW single-phase MPPT", "unit": "per_item", "kw": 6, "low": 315000, "high": 315000, "as_of": null, "confidence": "undated listing", "source": "https://w11stop.com/hybrid-inverter"},
+      {"category": "battery_lithium", "product": "Titan 5.12 kWh 48 V 100 Ah", "unit": "per_item", "kwh": 5.12, "low": 195000, "high": 195000, "as_of": null, "confidence": "undated listing", "source": "https://w11stop.com/solar/solar-batteries-storage/low-voltage-lithium-battery/fronus-titan-5-12kwh-lithium-battery-48v-100ah-price-in-pakistan"}
+    ],
+    "itel": [
+      {"category": "inverter", "product": "6 kW hybrid (Pro and IP66 models)", "unit": "per_item", "kw": 6, "low": 143000, "high": 235000, "as_of": "2026-07-09", "confidence": "dated listing", "source": "https://w11stop.com/itel-inverter", "note": "Rs 143,000 (Pro, 29 Jun), Rs 195,000 (IP66, 9 Jul), Rs 235,000 at another retailer."}
+    ],
+    "ziewnic": [
+      {"category": "inverter", "product": "Brand range, small and medium models", "unit": "per_item", "kw": null, "low": 72000, "high": 250000, "as_of": null, "confidence": "retailer brand page", "source": "https://powerhouseexpress.com.pk/collections/solar-inverters", "note": "Not enough detail to use in estimates."}
+    ],
+    "pylontech": [
+      {"category": "battery_lithium", "product": "5.12 kWh 48 V 100 Ah (Fidus, PYLH-07 and similar)", "unit": "per_item", "kwh": 5.12, "low": 225000, "high": 315000, "as_of": null, "confidence": "dated and undated listings", "source": "https://powerhouseexpress.com.pk/collections/lithium-batteries?page=2", "note": "W11stop Jul to Aug 2026: Rs 225,000 to 260,000; Powerhouse Express: Rs 275,000 to 315,000."}
+    ],
+    "dyness": [
+      {"category": "battery_lithium", "product": "DL5.0C 5.12 kWh 51 V 100 Ah", "unit": "per_item", "kwh": 5.12, "low": 255000, "high": 260000, "as_of": "2026-08-07", "confidence": "dated listing", "source": "https://w11stop.com/dyness-dl5-0C-5-12kwh-51v-lithium-battery-price-in-pakistan"}
+    ],
+    "byd": [
+      {"category": "battery_lithium", "product": "Battery-Box LV5.0 (5 kWh) and LV5.0+ (5.12 kWh)", "unit": "per_item", "kwh": 5, "low": 240000, "high": 270000, "as_of": null, "confidence": "retailer listing", "source": "https://w11stop.com/lithium-ion-batteries"}
+    ],
+    "narada": [
+      {"category": "battery_lithium", "product": "48NPFC100 48 V 100 Ah", "unit": "per_item", "kwh": 4.8, "low": 215000, "high": 260000, "as_of": "2026-04-08", "confidence": "dated listing", "source": "https://w11stop.com/narada-48npfc100-lithium-battery", "note": "Newest listings near Rs 215,000 to 240,000."}
+    ]
+  }
+}

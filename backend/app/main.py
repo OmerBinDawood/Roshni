@@ -16,7 +16,7 @@ from . import assistant_tools, billfetch, db, gemini  # noqa: E402
 from .auth import optional_user, required_user  # noqa: E402
 from .engine.audit import battery_options, run_audit  # noqa: E402
 from .engine.data import cities, regulatory  # noqa: E402
-from .engine.sizing import SizeReq, size_solar  # noqa: E402
+from .engine.sizing import EstimateReq, SizeReq, estimate_with_brands, size_solar  # noqa: E402
 from .engine.readiness import ReadinessIn, check as readiness_check  # noqa: E402
 from .engine.validate import validate_quote  # noqa: E402
 from .schemas import AuditRequest, Bill, Profile, Quote, SystemConfig  # noqa: E402
@@ -343,6 +343,11 @@ def size_my_solar(r: SizeReq):
         return size_solar(r)
     except ValueError as e:
         raise HTTPException(400, str(e))
+
+
+@app.post("/api/size/estimate")
+def size_estimate(r: EstimateReq):
+    return estimate_with_brands(r)
 
 
 @app.post("/api/readiness")

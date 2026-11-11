@@ -141,3 +141,45 @@ def test_size_validates_input_and_assistant_tool():
     out = tools.size_my_solar("Lahore", 450, ac_count=1, budget_rs=800000)
     assert out["options"] and "error" not in out
     assert "error" in tools.size_my_solar("Atlantis", 450)
+
+
+# ---------- per-brand prices ----------
+from app.engine import brands as brand_guide  # noqa: E402
+
+
+def test_price_data_is_sourced_dated_or_flagged_and_matches_brands():
+    pd = brand_guide.price_data()
+    ids = {b["id"] for b in brand_guide.guide()["brands"]}
+    assert pd["disclaimer"] and "re-verify" in pd["disclaimer"].lower()
+    for bid, rows in pd["prices"].items():
+        assert bid in ids, bid
+        for r in rows:
+            assert r["source"].startswith("https://") and r["confidence"] and r["low"] <= r["high"] and r["low"] > 0
+            assert r["category"] in {c for b in brand_guide.guide()["brands"] if b["id"] == bid for c in b["categories"]}
+            if r["category"] == "panel":
+                assert 20 <= r["low"] <= 80 and r["unit"] == "per_w"          # Rs per watt, not a line total
+    assert "Dealer price listings" in brand_guide.knowledge_text()
+
+
+def test_size_response_carries_prices_per_brand():
+    out = c.post("/api/size", json=SIZE_BODY).json()
+    aiko = next(b for b in out["brand_options"]["panel"]["brands"] if b["id"] == "aiko")
+    assert aiko["prices"] and aiko["prices"][0]["as_of"] == "2026-10-08"
+    assert out["price_disclaimer"] and out["market_notes"]
+
+
+def test_estimate_uses_brand_listings_and_falls_back_to_market_ranges():
+    body = {"dc_kw": 5, "inverter_kw": 4, "inverter_type": "hybrid", "battery_kwh": 5,
+            "panel_brand": "aiko", "inverter_brand": "goodwe", "battery_brand": "dyness", "budget_rs": 1000000}
+    r = c.post("/api/size/estimate", json=body).json()
+    assert set(r["from_listings"]) == {"panels", "inverter", "battery"}
+    assert r["parts"]["structure_install"]["basis"] == "market range"
+    assert r["total"]["low"] == sum(p["low"] for p in r["parts"].values()) and r["budget_verdict"] in ("within", "maybe")
+    assert r["parts"]["panels"]["low"] == 5000 * 41                               # Rs 41/W from the dated listing
+    none = c.post("/api/size/estimate", json={**body, "panel_brand": None, "inverter_brand": "deye", "battery_brand": "felicity"}).json()
+    assert none["from_listings"] == [] and all(p["basis"] == "market range" for p in none["parts"].values())  # no listing found
+    ongrid = c.post("/api/size/estimate", json={**body, "inverter_type": "on_grid", "battery_kwh": 0}).json()
+    assert ongrid["parts"]["inverter"]["basis"] == "market range" and "battery" not in ongrid["parts"]
+    assert c.post("/api/size/estimate", json={**body, "dc_kw": -1}).status_code == 422
+    over = c.post("/api/size/estimate", json={**body, "budget_rs": 100000}).json()
+    assert over["budget_verdict"] == "over"

@@ -15,18 +15,18 @@ Roshni is a working, tested web platform that gives Pakistani households an inde
 | Item | Count |
 |---|---|
 | Page routes | 16 (home, size, audit, report, bill, battery, readiness, learn, compare, health, financing, guides, brands, account, about, admin) |
-| API endpoints | 35 |
+| API endpoints | 36 |
 | Audit rules | 26 (R01 to R25 from the PRD catalogue, plus R26 for roof orientation) |
 | Cities with hourly weather | 35 |
 | Brand profiles | 37 |
-| Backend automated tests | 52, all passing |
+| Backend automated tests | 55, all passing |
 | Live end-to-end checks with real AI and database | 40 core + 17 adversarial (build day), plus 19 and 14 re-run on the final code, all passing |
 | Bugs found by testing and fixed | 9 in the final build pass, earlier fixes in section 10, and 1 more found in the post-build review (sign-in clock skew) |
 | Commits on GitHub main | 7 (the review fix and these docs are local and unpushed) |
 
 The code lives at OmerBinDawood/Roshni. The rest of this document explains each feature, the approach and technology behind it, the business rules, and every step taken to build it.
 
-> **Corrections in this version.** The first draft said 18 pages (and "all 17 pages load"); the code has 15 page routes, and all 15 return HTTP 200. The test count was 41; it is now 52 after the sign-in fix, the gap-closing work and the sizing journey. Everything else in the first draft was checked against the code and matched: 26 rules, 35 cities, 37 brands, 7 commits, versions of the main libraries.
+> **Corrections in this version.** The first draft said 18 pages (and "all 17 pages load"); the code has 15 page routes, and all 15 return HTTP 200. The test count was 41; it is now 55 after the sign-in fix, the gap-closing work, the sizing journey and brand prices. Everything else in the first draft was checked against the code and matched: 26 rules, 35 cities, 37 brands, 7 commits, versions of the main libraries.
 
 ## 2. Starting point and guiding decisions
 
@@ -94,7 +94,7 @@ backend/
   app/auth.py          Supabase token verification
   app/assistant_tools.py  calculators the assistant can call (Gemini function calling)
   app/billfetch.py     official bill-portal client
-  tests/               52 tests
+  tests/               55 tests
 frontend/
   src/app/             one folder per page (report view: app/report/[id]/ReportView.tsx; size my solar: app/size)
   src/components/      Assistant, ProfileForm, FilePick, BillLookup, Header, ui
@@ -108,7 +108,7 @@ Roshni has 25 user-facing features across 16 page routes. The core is the quote 
 
 | Feature | Page | PRD priority | What the user gets | How it works |
 |---|---|---|---|---|
-| Size my solar | /size | Added on request | System options (on-grid, hybrid + 5 or 10 kWh) with cost ranges, savings, payback and backup hours from the user's appliances, bill, budget and roof; brand facts and checks per part, no scores | Same load and finance engine as the audit; sizing rule in section 5.7 (Q); component price ranges in `regulatory.json` |
+| Size my solar | /size | Added on request | System options (on-grid, hybrid + 5 or 10 kWh) with cost ranges, savings, payback and backup hours from the user's appliances, bill, budget and roof; brand facts, dated public price listings and checks per part, no scores; estimate builder for the brands the user picks | Same load and finance engine as the audit; sizing rule in section 5.7 (Q); component price ranges in `regulatory.json` |
 | Quote second opinion | /audit | P0 | A report: verdict, critical issues, savings range, backup hours, questions for the installer | 4-step wizard: quote, bill, home, confirm. Gemini reads the quote; the user confirms every line; the engine simulates a year and runs 26 rules |
 | Parts-list safety check | /audit?mode=parts | P0-lite | Will these parts work together safely? | Same wizard without the bill step; only safety and compatibility rules run, no savings maths |
 | Quote validator | confirm step + report | P0 | Warnings on arithmetic and missing models | Deterministic check: qty × price = line total (0.5%), lines = grand total (0.2%), missing model numbers |
@@ -347,7 +347,8 @@ R12 to R16 accept an item as listed when its item type matches or any line's tex
 - Choose the largest size where every extra step pays for itself within 6 years, within budget; under net billing on-grid sizes exporting more than 40% are excluded. Nothing within budget: options are shown and marked over budget.
 - Cost = panels Rs 40-45/W + inverter (on-grid Rs 25,000-45,000 per kW; hybrid Rs 35,000-55,000 per kW) + battery Rs 45,000-65,000 per usable kWh + structure and installation Rs 40-65/W. Inverter and installation rates are assumptions reconciled to the 5 kW system benchmark; approval and meter fees excluded.
 - Simple payback = cost midpoint / expected yearly saving. Backup hours = usable battery kWh / chosen backup load (minimum 0.3 kW).
-- Brands: alphabetical, grouped by part; filters by international or Pakistan-market and by having an official verification or compatibility link; never scored; no Reddit or forum ratings (anonymous, gameable, unverifiable); no per-brand prices.
+- Brands: alphabetical, grouped by part; filters by international or Pakistan-market and by having an official verification or compatibility link; never scored; no Reddit or forum ratings (anonymous, gameable, unverifiable).
+- Brand prices: public dealer listings and guides in `brand_prices.json`, each with date (when known), confidence label and source; panels in Rs per watt, inverters and batteries per listed unit with its kW or kWh. Every price is shown with a re-verify warning. Estimate builder: panels at the brand's Rs per watt times system watts; hybrid inverter at the listed model price (scaled up only for larger systems); lithium battery at the listing's Rs per kWh times usable kWh; installation and any brand without a listing at market ranges; total compared with budget (within, maybe, over). On-grid inverter prices are not collected per brand.
 
 **N. Bill lookup by reference**
 
@@ -600,7 +601,13 @@ The platform was built in seven phases on 11 November 2026, ending in seven comm
 3. Found and fixed the sign-in clock-skew bug; added a regression test (42 tests).
 4. Mapped how features connect and where they do not; wrote [PLATFORM.md](PLATFORM.md) and the business-rule catalogue in section 5.7.
 
-**Phase 10 (size my solar, local, not yet pushed)**
+**Phase 11 (per-brand prices, local, not yet pushed)**
+1. Searched retailer pages and price guides (W11stop, Powerhouse Express, Zell, PhoneWorld, SolarApp, news) for panel, hybrid inverter and lithium battery prices; recorded each with source, date if shown and a confidence label; left out figures that looked wrong (for example an AIKO panel at Rs 85 to 110 per watt and a Pylontech UP-5000 at Rs 550,000) and noted conflicts.
+2. Added `brand_prices.json`, price fields on the brand lists, `/api/size/estimate` and the "Build your own estimate with brands" card; the assistant's knowledge base now includes the listings with dates and the re-verify warning.
+3. Lowered the panel low end in the sizing costs to Rs 37 per watt after early-November news of Karachi dealers near that level.
+4. 3 new tests (55 total); checked in the browser with AIKO, GoodWe and Dyness against a 10 lakh budget.
+
+**Phase 10 (size my solar, committed and pushed)**
 1. Added `sizing_costs` to `regulatory.json` (version 2026-11-11c) and `engine/sizing.py`.
 2. `/api/size`, an assistant tool `size_my_solar`, the `/size` page, and links from home, header, footer and readiness.
 3. Brand options follow the no-rankings rule: alphabetical lists with facts, official checks and filters; Reddit-style ratings were declined with reasons.
@@ -699,7 +706,7 @@ The platform is complete for the PRD's first release, but four things remain unv
 | Full Urdu interface | Reports, lessons, bill explanations, verdicts and the assistant are bilingual; most form labels are still English |
 | Brand rankings, shortlists and installer listings | PRD sections 7 and 13 (independence) and 1.2 (no installer directory); the brand guide is neutral and alphabetical |
 
-**Feature gaps found in the post-build review** (details in [PLATFORM.md](PLATFORM.md) section 5): six were closed in phase 9 and the sizing journey was added in phase 10. Still open: readiness and the health check do not hand data to the audit; per-brand prices are not tracked.
+**Feature gaps found in the post-build review** (details in [PLATFORM.md](PLATFORM.md) section 5): six were closed in phase 9 and the sizing journey was added in phase 10. Still open: readiness and the health check do not hand data to the audit; brand prices need a regular refresh and have gaps (see PLATFORM.md section 8).
 
 **Recommended next steps, in order:** run the PRD's concierge pilot with 30 to 50 real quotes; verify the datasheets in the review queue; deploy to a public host; translate the remaining form labels into Urdu; add error monitoring (the PRD suggests Sentry and PostHog).
 
@@ -711,6 +718,7 @@ The platform is complete for the PRD's first release, but four things remain unv
 - ProPakistani: NEPRA retains net metering for existing consumers, 16 Feb 2026
 - Daily Times: Budget 2026-27 brings solar tax stability
 - Zell: solar panel prices in Pakistan, Oct 2026
+- Brand price sources: W11stop, Powerhouse Express, Zell, PhoneWorld, SolarApp, MaxPower, ToolsFluent and Bolnews (URLs in `backend/app/data/brand_prices.json`)
 - GreenOH: 5 kW solar system price, Nov 2026
 - PITC web bill portal
 - pvlib and PVGIS

@@ -82,9 +82,9 @@
     "as_of": "2026-11-11",
     "note": "Indicative component prices used only to size and cost a system before quotes exist. Ranges were reconciled so a 5 kW on-grid system lands inside the dated installer-guide total in price_benchmarks. They are not quotes; per-brand prices are deliberately not tracked because dealer prices change weekly.",
     "panel_rs_per_w": {
-      "low": 40,
-      "high": 45,
-      "source_ref": "price_benchmarks.panel_rs_per_w"
+      "low": 37,
+      "high": 46,
+      "source_ref": "brand_prices.json: Rs 40 to 46 per watt in brand listings (Oct 2026); Karachi dealers about Rs 37 in early Nov 2026 (Bolnews)"
     },
     "inverter_ongrid_rs_per_kw": {
       "low": 25000,

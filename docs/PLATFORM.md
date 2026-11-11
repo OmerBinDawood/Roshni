@@ -8,12 +8,12 @@ Roshni is an independent second opinion on a solar or battery quote for Pakistan
 
 ## 1. What exists
 
-**16 page routes** (14 feature pages plus the home page and the report page), **35 API endpoints**, **26 audit rules**, **35 cities**, **37 brand profiles**, **52 backend tests**.
+**16 page routes** (14 feature pages plus the home page and the report page), **36 API endpoints**, **26 audit rules**, **35 cities**, **37 brand profiles**, **55 backend tests**.
 
 | Route | Purpose | Backend endpoints used |
 |---|---|---|
 | `/` | Home: entry cards for every journey | `/meta` |
-| `/size` | **Size my solar**: appliances + bill + budget + roof to 2 or 3 system options with cost ranges, savings, payback and backup hours, then brand facts and checks for each part (no scores) | `/size` |
+| `/size` | **Size my solar**: appliances + bill + budget + roof to 2 or 3 system options with cost ranges, savings, payback and backup hours, then brand facts, dated public price listings and checks for each part (no scores), and an estimate builder using the brands the user picks | `/size`, `/size/estimate` |
 | `/audit` | 4-step wizard: quote, bill, home, confirm. `?mode=parts` skips the bill and savings | `/extract/quote`, `/extract/bill`, `/bill/lookup`, `/profile/parse`, `/specs/lookup`, `/validate/quote`, `/audit` |
 | `/report/[id]` | The audit report: verdict, findings, savings, backup, brands, installer kit, share, PDF, Urdu | `/report/{id}`, `/report/{id}/access`, `/report/{id}/urdu`, `/report/{id}/claim`, `/report/{id}/outcome` |
 | `/bill` | Bill Decoder: every bill line explained in English and Urdu; lookup by reference number | `/extract/bill`, `/bill/lookup`, `/bill/companies` |
@@ -33,7 +33,7 @@ Also on every page: the **Roshni Madadgar assistant** (English, Urdu, Roman Urdu
 
 ### Complete API list
 
-`GET /api/health`, `GET /api/meta`, `POST /api/extract/quote`, `POST /api/validate/quote`, `POST /api/extract/bill`, `GET /api/bill/companies`, `POST /api/bill/lookup`, `POST /api/specs/lookup`, `POST /api/profile/parse`, `POST /api/audit`, `GET|DELETE /api/report/{id}`, `GET /api/report/{id}/access`, `POST /api/report/{id}/claim`, `POST /api/report/{id}/urdu`, `POST /api/report/{id}/outcome`, `GET|DELETE /api/me/reports`, `GET|PUT /api/me/profile`, `POST /api/size`, `POST /api/extract/readings`, `GET /api/admin/insights`, `POST /api/battery`, `POST /api/readiness`, `POST /api/chat`, `POST /api/chat/upload`, `GET /api/admin/datasheets`, `POST /api/admin/datasheets/{id}/verify`, `GET /api/admin/stats`, `POST /api/compare`, `POST /api/health-check`, `POST /api/financing`, `GET /api/brands`, `GET /api/brands/{id}`.
+`GET /api/health`, `GET /api/meta`, `POST /api/extract/quote`, `POST /api/validate/quote`, `POST /api/extract/bill`, `GET /api/bill/companies`, `POST /api/bill/lookup`, `POST /api/specs/lookup`, `POST /api/profile/parse`, `POST /api/audit`, `GET|DELETE /api/report/{id}`, `GET /api/report/{id}/access`, `POST /api/report/{id}/claim`, `POST /api/report/{id}/urdu`, `POST /api/report/{id}/outcome`, `GET|DELETE /api/me/reports`, `GET|PUT /api/me/profile`, `POST /api/size`, `POST /api/size/estimate`, `POST /api/extract/readings`, `GET /api/admin/insights`, `POST /api/battery`, `POST /api/readiness`, `POST /api/chat`, `POST /api/chat/upload`, `GET /api/admin/datasheets`, `POST /api/admin/datasheets/{id}/verify`, `GET /api/admin/stats`, `POST /api/compare`, `POST /api/health-check`, `POST /api/financing`, `GET /api/brands`, `GET /api/brands/{id}`.
 
 ---
 
@@ -72,7 +72,8 @@ Before any document reaches Gemini the user must tick the consent box; the API r
 | Hourly battery and grid dispatch | `backend/app/engine/dispatch.py` |
 | Quote arithmetic checks | `backend/app/engine/validate.py` |
 | Readiness check | `backend/app/engine/readiness.py` |
-| Size my solar (options, costs, brand lists) | `backend/app/engine/sizing.py` |
+| Size my solar (options, costs, brand lists, brand estimate) | `backend/app/engine/sizing.py` |
+| Per-brand price listings with source, date and confidence | `backend/app/data/brand_prices.json` |
 | Compare, health check, financing | `backend/app/engine/extras.py` |
 | Brand matching and notes | `backend/app/engine/brands.py` |
 | Official bill portal client | `backend/app/billfetch.py` |
@@ -135,9 +136,9 @@ The full catalogue with thresholds and reasons is section 5.7 of [HOW_WE_BUILT_I
 2. The datasheet catalogue still grows only through manual admin review.
 3. Load-shedding hours use one fixed slot order for every city.
 4. Urdu is partial: reports, lessons, bill explanations, verdicts and the assistant are bilingual; most form labels are English only.
-5. Per-brand prices are not tracked (see the note below).
+5. Per-brand prices cover about 30 brands from public listings and guides; Deye, Felicity inverter and several others had no usable listing. Prices must be refreshed regularly (see section 8).
 
-**Brand options and ratings (decided).** `/size` lists brands per part alphabetically with origin, what the product is, Pakistan notes, official verification links and the category checks, and can filter by international or Pakistan-market and by having an official check or compatibility list. It does not score or rank, and it does not use Reddit or forum ratings: they are anonymous, easy to game and cannot be verified. Per-brand prices are not tracked because dealer prices change weekly; the page shows component price ranges and tells the user to compare written quotes.
+**Brand options, prices and ratings (decided).** `/size` lists brands per part alphabetically with origin, what the product is, Pakistan notes, official verification links, the category checks and, where one exists, the public price listing with its date, confidence and source link. Every price carries a "re-verify before you pay" warning. It does not score or rank, and it does not use Reddit or forum ratings: they are anonymous, easy to game and cannot be verified. A brand-estimate builder prices a chosen system from the picked brands' listings and market ranges for everything else, and compares the total with the user's budget.
 
 ---
 
@@ -161,7 +162,7 @@ The full catalogue with thresholds and reasons is section 5.7 of [HOW_WE_BUILT_I
 
 | Check | Result |
 |---|---|
-| Backend tests | 52 / 52 pass |
+| Backend tests | 55 / 55 pass |
 | TypeScript and ESLint | Clean |
 | All 15 routes respond | Yes (HTTP 200) |
 | Live end-to-end with real Gemini and Supabase, signed in with a test account | 19 / 19 pass: audit, history, ownership, claim, Urdu, compare, assistant with report context, battery, readiness, health, financing, brands, quote extraction, consent refusal, admin protection, delete all |
@@ -180,3 +181,7 @@ Still unverified: a bill lookup with a real reference number, a real sign-in ema
 - **Cost:** component ranges from `regulatory.json` `sizing_costs` (panels Rs 40-45/W, inverter per kW, battery Rs 45,000-65,000 per usable kWh, structure and installation Rs 40-65/W). Inverter and installation rates are assumptions reconciled to the dated 5 kW system total; approval and meter fees are extra.
 - **Payback:** simple payback = cost midpoint / yearly saving (the report adds inverter and battery replacement).
 - **Brands:** alphabetical lists for panels, inverters and (when a battery is in an option) lithium batteries, with the category checks. No ranking, no scores.
+
+- **Per-brand prices (added later the same day):** `brand_prices.json` holds, per brand, the product, a price (Rs per watt for panels; Rs per listed unit with its kW or kWh for inverters and batteries), the listing date when known, a confidence label (dated listing, undated listing, price guide, price tracker, retailer brand page) and the source URL. Where sources disagree the entry says so (for example Risen and Inverex). `/size/estimate` uses a picked brand's listing for panels (per watt), hybrid inverters (the listed model's price, scaled up only when the system needs a larger inverter) and lithium batteries (per kWh), and market ranges for everything else, including installation and any brand with no listing. Total is compared with the budget: within, maybe (low end fits) or over.
+- **What is covered:** panels for 10 brands; hybrid inverters for 12 brands (Huawei and Ziewnic are display-only because no model size was stated); lithium batteries for 6 brands. No usable public listing was found for Deye, Felicity, Crown inverters, Sunwoda, Hithium, Sacred Sun, Leoch, Soluna, and the lead-acid brands, and the page says so rather than guessing.
+- **Refreshing:** prices are dealer listings from 11 November 2026 and age quickly; refresh `brand_prices.json` and its `as_of` at least monthly, and prefer dated retailer pages over guides.

@@ -80,6 +80,24 @@ def brand_notes(line_items: list) -> list[dict]:
     return out
 
 
+def price_data() -> dict:
+    return load("brand_prices")
+
+
+def prices_for(brand_id: str, category: str | None = None) -> list[dict]:
+    rows = price_data()["prices"].get(brand_id, [])
+    return [r for r in rows if category is None or r["category"] == category]
+
+
+def _fmt_price(r: dict) -> str:
+    if r["unit"] == "per_w":
+        span = f"Rs {r['low']:g}" + (f" to {r['high']:g}" if r["high"] != r["low"] else "") + " per watt"
+    else:
+        span = f"Rs {r['low']:,.0f}" + (f" to {r['high']:,.0f}" if r["high"] != r["low"] else "")
+    when = f"listed {r['as_of']}" if r.get("as_of") else "undated"
+    return f"{r['product']}: {span} ({when}, {r['confidence']})"
+
+
 def knowledge_text() -> str:
     """Compact brand guide for the assistant's knowledge base."""
     g = guide()
@@ -92,5 +110,11 @@ def knowledge_text() -> str:
     for cat, checks in g["category_checks"].items():
         lines.append(f"### What to check: {CATEGORY_LABELS[cat]}")
         lines += [f"- {c}" for c in checks]
+    pd = price_data()
+    lines.append(f"### Dealer price listings (collected {pd['as_of']})")
+    lines.append(pd["disclaimer"])
+    for bid, rows in pd["prices"].items():
+        name = next((b["name"] for b in g["brands"] if b["id"] == bid), bid)
+        lines.append(f"- {name}: " + "; ".join(_fmt_price(r) for r in rows))
     lines.append("Users can browse all brands at /brands.")
     return "\n".join(lines)
