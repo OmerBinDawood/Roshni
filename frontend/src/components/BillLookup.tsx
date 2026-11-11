@@ -13,7 +13,13 @@ export default function BillLookup<T>({ onResult, consent: outerConsent }: { onR
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const agreed = outerConsent || consent;
-  const digits = ref.replace(/\D/g, "");
+  const raw = ref.replace(/\D/g, "");
+  const digits = raw.length === 15 ? raw.slice(0, 14) : raw; // a trailing 15th digit takes the place of the letter on some bills
+  const reasons = [
+    ...(digits.length !== 14 ? [`the reference needs 14 digits (you typed ${raw.length})`] : []),
+    ...(!agreed ? ["tick the AI consent box"] : []),
+    ...(disco === "K-Electric" ? ["K-Electric bills must be uploaded as a photo"] : []),
+  ];
 
   async function go() {
     setBusy(true); setError(null);
@@ -42,6 +48,8 @@ export default function BillLookup<T>({ onResult, consent: outerConsent }: { onR
       <Button onClick={go} disabled={busy || digits.length !== 14 || !agreed || disco === "K-Electric"}>
         {busy ? "Fetching from the official portal…" : "Fetch my bill"}
       </Button>
+      {reasons.length > 0 && !busy && <p className="text-sm font-medium text-warn">To continue: {reasons.join("; ")}.</p>}
+      {raw.length === 15 && <p className="text-xs text-muted">15 digits entered: Roshni will use the first 14 (the last character on a bill is often a letter).</p>}
       <p className="text-xs text-muted">
         Roshni requests your duplicate bill from the official PITC portal (bill.pitc.com.pk), once, on your request. We don&apos;t store your
         reference number. If the portal asks for a CAPTCHA, we stop and ask you to upload a photo instead.

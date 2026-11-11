@@ -43,6 +43,8 @@ def rate_limit(client_id: str):
 
 def normalise_ref(ref: str) -> str:
     digits = re.sub(r"\D", "", ref or "")
+    if len(digits) == 15:  # some bills print a trailing digit where others print a letter (e.g. "U"); the reference is the first 14
+        digits = digits[:14]
     if len(digits) != 14:
         raise LookupError_("invalid_ref", "The reference number must have 14 digits (as printed on your bill, ignore letters like 'U').")
     return digits
