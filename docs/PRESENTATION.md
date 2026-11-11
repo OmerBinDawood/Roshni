@@ -22,6 +22,8 @@ A ready outline for presenting Roshni: the story, the live demo, how it was buil
 
 **By the numbers:** 16 pages, 40 API endpoints, 27 audit rules, 35 cities with hourly weather, 37 brand profiles (about 30 with price listings), 59 automated tests, 10 lessons and a 21-term glossary.
 
+**Open with the homepage:** scroll it as the first demo. The sticky story (messy quote to report), the net-billing slider and the audit console explain the product without a word of slides.
+
 ## 4. Live demo (6 minutes)
 Follow the "10-minute guided demo" in [USER_GUIDE.md](USER_GUIDE.md); cut steps 1 and 6 for time.
 
@@ -78,13 +80,13 @@ How it was built (see [HOW_WE_BUILT_IT.md](HOW_WE_BUILT_IT.md)): one day, from t
 **Frontend**
 | Library | Version | Used for |
 |---|---|---|
-| Next.js | 16.4.6 | Web app (app router), API rewrite |
+| Next.js | 16.4.6 | Web app (app router, route groups), API rewrite |
 | React | 19.3.0 | UI |
 | TypeScript | 5 | Type safety |
-| Tailwind CSS | 4.3.3 | Styling, mobile first, right-to-left Urdu |
+| Tailwind CSS | 4.3.3 | Styling, mobile first, right-to-left Urdu; custom light design system, CSS-only animation (no animation library) |
 | @supabase/ssr and supabase-js | 0.12.7, 2.119 | Email sign-in in the browser |
 | ESLint | 9 | Lint, including React hooks rules |
-| Fonts | Inter, Noto Nastaliq Urdu | Via next/font |
+| Fonts | Manrope, Inter, Noto Nastaliq Urdu | Via next/font |
 
 **Browser features reused:** Web Speech API (voice in, read-aloud), print to PDF.
 

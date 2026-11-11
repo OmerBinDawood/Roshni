@@ -2,15 +2,14 @@
 import { useId, type ReactNode } from "react";
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`bg-surface border border-line rounded-2xl p-4 sm:p-5 ${className}`}>{children}</div>;
+  return <div className={`card p-4 sm:p-5 ${className}`}>{children}</div>;
 }
 
 export function Button({ children, onClick, disabled, variant = "primary", type = "button", className = "" }: {
   children: ReactNode; onClick?: () => void; disabled?: boolean; variant?: "primary" | "ghost"; type?: "button" | "submit"; className?: string;
 }) {
-  const base = "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium transition disabled:opacity-50";
-  const v = variant === "primary" ? "bg-sun text-[#2a1d00] hover:brightness-105" : "border border-line hover:bg-bg";
-  return <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${v} ${className}`}>{children}</button>;
+  const v = variant === "primary" ? "btn-primary" : "btn-ghost";
+  return <button type={type} onClick={onClick} disabled={disabled} className={`btn ${v} ${className}`}>{children}</button>;
 }
 
 export function Num({ label, value, onChange, step = 1, min = 0 }: {

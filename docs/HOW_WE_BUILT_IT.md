@@ -604,6 +604,12 @@ The platform was built in seven phases on 11 November 2026, ending in seven comm
 3. Found and fixed the sign-in clock-skew bug; added a regression test (42 tests).
 4. Mapped how features connect and where they do not; wrote [PLATFORM.md](PLATFORM.md) and the business-rule catalogue in section 5.7.
 
+**Phase 14 (UI redesign, local until pushed)**
+1. Read the shared design chat and set the direction: light theme only, glowing sun, scroll-driven story, section-specific interactions, no generic "AI dashboard" look.
+2. New design system (tokens, buttons with shine sweep, cards, sliders, animations with reduced-motion support), Manrope display font, floating header, new footer; inner pages moved into an `(app)` route group so the homepage can be full width.
+3. New homepage with twelve sections (hero with 3D panel and glowing sun, sticky scroll story, net-billing simulator, audit console, feature cards with distinct hovers, sizing preview, trust, team, FAQ, final call to action), including the team: Omer Bin Dawood, Hira Baig and Alwaz Islam from COMSATS University Islamabad.
+4. Checked in a real desktop browser, on a phone-width viewport and in Urdu right-to-left; fixed a CSS layering bug (custom classes were overriding Tailwind's `hidden`). Details in PLATFORM.md section 12.
+
 **Phase 13 (quote vs sizing, saved sizings, English-only mode, run and presentation docs, local, not yet pushed)**
 1. Rule R27 compares a quote's size and price with Roshni's own sizing; sizing was made lazy (stops once extra size no longer pays) so audits stay near 3 seconds.
 2. Sizing results are saved automatically (new `sizings` table, share link, PDF, claim, delete, list in the account).

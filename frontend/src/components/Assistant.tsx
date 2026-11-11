@@ -80,12 +80,12 @@ export default function Assistant() {
     <div className="no-print">
       {!open && (
         <button onClick={() => setOpen(true)}
-          className="fixed bottom-4 end-4 z-40 rounded-full bg-sun text-[#2a1d00] font-semibold px-5 py-3 shadow-lg">
+          className="btn btn-primary fixed bottom-4 end-4 z-40 !px-5 !py-3 shadow-xl">
           💬 {t("askMadadgar")}
         </button>
       )}
       {open && (
-        <div className="fixed z-50 bottom-0 end-0 sm:bottom-4 sm:end-4 w-full sm:w-[380px] h-[75vh] sm:h-[560px] bg-surface border border-line sm:rounded-2xl shadow-2xl flex flex-col">
+        <div className="fixed z-50 bottom-0 end-0 sm:bottom-4 sm:end-4 w-full sm:w-[380px] h-[75vh] sm:h-[560px] bg-white border border-line sm:rounded-3xl shadow-[0_30px_80px_rgba(15,27,45,0.25)] flex flex-col">
           <div className="flex items-center justify-between px-4 py-3 border-b border-line">
             <div>
               <div className="font-semibold">Roshni Madadgar</div>

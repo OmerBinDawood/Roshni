@@ -224,3 +224,32 @@ There are no admin usernames. Admin is one shared secret, `ADMIN_TOKEN` in `back
 ## 11. Language
 
 English mode is fully English (no Urdu text appears unless the user switches language; the switch itself reads "Urdu"). Urdu mode is partial: reports, lessons, bill explanations, verdicts and the assistant are bilingual, while many form labels and the newest pages stay English.
+
+## 12. Design system and homepage (UI redesign, 11 November 2026)
+
+**Direction:** light only (the old dark-mode media query was removed), warm daylight white with deep navy ink, a glowing sun as the brand mark and hero, electric blue and teal as supporting accents. Headings use Manrope, body text Inter, Urdu uses Noto Nastaliq. Reference: the shared design chat (light theme, scroll-driven story, section-specific interactions, shine-sweep buttons) plus our own ideas.
+
+**Tokens (in `frontend/src/app/globals.css`):** `--bg #fffaf0`, `--ink #0f1b2d`, `--sun #ffb020`, `--sun-deep #f58a07`, `--blue #2f6bff`, `--teal #10b5a3`, `--leaf #0f8a63`, `--red #d92d20`. Shared classes: `.btn` (primary with amber gradient and shine sweep, ghost, dark), `.card` and `.card-lift`, `.reveal` (scroll reveal), range sliders with a sun thumb. All animations respect `prefers-reduced-motion`.
+
+**Layout:** the homepage is full width. Every other page lives in the `(app)` route group, which adds the container and a soft sun-glow backdrop (URLs are unchanged). A floating pill header (turns solid on scroll, hamburger below 1280 px) and a four-column footer wrap everything.
+
+**Homepage sections, each with its own interaction** (files in `frontend/src/components/home/`):
+
+| # | Section | Interaction |
+|---|---|---|
+| 1 | Hero | Glowing sun with breathing rays and orbit, a tilted 3D solar panel and floating product chips that follow the pointer (parallax), animated wave into the next section |
+| 2 | Marquee | Endless strip of what Roshni checks |
+| 3 | Why Roshni exists | Bars that grow and numbers that count up when scrolled into view; the "quote promise vs real estimate" example |
+| 4 | How it works | Sticky scroll story: one quote changes through Upload, Extract, Audit, Decide as you scroll (stacked cards on phones) |
+| 5 | Net billing simulator | Slider and battery toggle drive an animated energy-flow diagram (illustration with example numbers, labelled as such) |
+| 6 | Audit console | Click any finding to expand its evidence and the question to ask the installer |
+| 7 | Everything in one place | Eight feature cards, each with a different hover (scanning line, growing bars, highlighting bill lines, filling battery, drawing chart and so on) plus four compact links |
+| 8 | Size my solar preview | Three sized options and real dated price listings with the re-verify warning |
+| 9 | Trust | Five principles in a bento grid |
+| 10 | Team | Omer Bin Dawood, Hira Baig and Alwaz Islam, COMSATS University Islamabad, with tilt-on-hover cards |
+| 11 | FAQ | Animated accordion |
+| 12 | Final call to action | The sun rises as the section scrolls into view |
+
+**Content rules for marketing copy:** every figure is real (27 rules, 35 cities, 37 brands, price listings from `brand_prices.json`, tariff facts from the sources) or clearly labelled "Example" or "Illustration". English mode contains no Urdu text.
+
+**Visual QA note:** layout was checked in a real desktop browser, a 375 px phone viewport (no horizontal scroll, header fits) and Urdu right-to-left. A custom CSS layer fix was needed so utility classes such as `hidden` can override `.btn`.
