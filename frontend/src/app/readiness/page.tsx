@@ -61,7 +61,7 @@ export default function Readiness() {
           {out.caution.length > 0 && <ul className="text-ink space-y-1">{out.caution.map((s) => <li key={s}>⚠️ {s}</li>)}</ul>}
           {out.good.length > 0 && <ul className="text-ink space-y-1">{out.good.map((s) => <li key={s}>✅ {s}</li>)}</ul>}
           <p className="text-sm text-muted">{out.note}</p>
-          {out.verdict !== "not_now" && <p className="text-ink">Next: get 2–3 quotes, then <a className="underline font-medium" href="/audit">check them with Roshni</a>.</p>}
+          {out.verdict !== "not_now" && <p className="text-ink">Next: <a className="underline font-medium" href="/size">size your system and see cost ranges</a>, get 2–3 quotes, then <a className="underline font-medium" href="/audit">check them with Roshni</a>.</p>}
         </div>
       )}
     </div>

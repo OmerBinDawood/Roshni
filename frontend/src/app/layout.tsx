@@ -23,7 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-6">{children}</main>
           <footer className="no-print border-t border-line text-sm text-muted">
             <nav className="max-w-4xl mx-auto px-4 py-4 flex flex-wrap gap-x-4 gap-y-1 pb-20 sm:pb-4">
-              <a href="/audit">Check a quote</a><a href="/audit?mode=parts">Parts check</a><a href="/bill">Bill decoder</a>
+              <a href="/size">Size my solar</a><a href="/audit">Check a quote</a><a href="/audit?mode=parts">Parts check</a><a href="/bill">Bill decoder</a>
               <a href="/battery">Battery advisor</a><a href="/readiness">Readiness</a><a href="/learn">Learn</a>
               <a href="/compare">Compare quotes</a><a href="/health">System health check</a><a href="/financing">Loan vs savings</a>
               <a href="/brands">Brand guide</a><a href="/guides">Guides</a><a href="/account">My reports</a><a href="/about">Independence &amp; privacy</a>

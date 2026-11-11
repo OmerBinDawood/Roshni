@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-11b",
+  "version": "2026-11-11c",
   "as_of": "2026-11-11",
   "note": "Domestic tariff verified against the official NEPRA notification S.R.O. 279(I)/2026 (12 Feb 2026). Buyback, regime and price figures are from dated news and market sources; see source_ref on each item.",
   "regimes": {
@@ -77,6 +77,35 @@
     "source_ref": "[9] FY2026-27 budget left panel sales tax at 10% (proposal for 18% dropped)",
     "inverters_gst_pct": 18,
     "inverters_source_ref": "Single secondary source (Business Recorder via TaxCalcPK); verify with FBR"
+  },
+  "sizing_costs": {
+    "as_of": "2026-11-11",
+    "note": "Indicative component prices used only to size and cost a system before quotes exist. Ranges were reconciled so a 5 kW on-grid system lands inside the dated installer-guide total in price_benchmarks. They are not quotes; per-brand prices are deliberately not tracked because dealer prices change weekly.",
+    "panel_rs_per_w": {
+      "low": 40,
+      "high": 45,
+      "source_ref": "price_benchmarks.panel_rs_per_w"
+    },
+    "inverter_ongrid_rs_per_kw": {
+      "low": 25000,
+      "high": 45000,
+      "source_ref": "derived from retailer ranges, price_benchmarks.inverter_5_6kw_rs; assumption"
+    },
+    "inverter_hybrid_rs_per_kw": {
+      "low": 35000,
+      "high": 55000,
+      "source_ref": "derived from retailer ranges, price_benchmarks.inverter_5_6kw_rs; assumption"
+    },
+    "battery_rs_per_usable_kwh": {
+      "low": 45000,
+      "high": 65000,
+      "source_ref": "existing battery advisor assumption (Rs 55,000 mid); assumption"
+    },
+    "structure_wiring_install_rs_per_w": {
+      "low": 40,
+      "high": 65,
+      "source_ref": "assumption: structure, cables, breakers, SPD, earthing, labour; excludes approval and meter fees"
+    }
   },
   "sources": {
     "1": "https://www.dawn.com/news/1972203",

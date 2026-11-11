@@ -112,6 +112,7 @@ export default function ReportView() {
         <Button variant="ghost" onClick={() => window.print()}>🖨️ Save as PDF</Button>
         <Button variant="ghost" onClick={() => window.dispatchEvent(new Event("roshni:open-assistant"))}>💬 Ask about this report</Button>
         {!parts && <a href={`/audit?compare=${id}`} className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">⚖️ Compare with another quote</a>}
+        {!parts && rep.system_summary.inverter_kw && <a href={`/battery?report=${id}`} className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">🔋 Should I add a battery?</a>}
         {!parts && f && <a href={`/financing?report=${id}`} className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">🏦 Loan vs savings</a>}
         {access?.can_manage && !access.owned_by_you && (session
           ? <Button variant="ghost" onClick={saveToAccount}>💾 Save to my account</Button>

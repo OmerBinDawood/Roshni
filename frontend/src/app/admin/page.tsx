@@ -3,12 +3,14 @@ import { useState } from "react";
 import { Button, Card, ErrorBox } from "@/components/ui";
 
 type DS = { id: string; kind: string; brand: string; model: string; specs: Record<string, unknown>; source: string | null; verified: boolean; verified_by: string | null; seen_count: number };
+type Insights = { responses: number; would_pay: Record<string, number>; rules: { rule_id: string; title: string; severity: string; responses: number; by_outcome: Record<string, number> }[]; note: string };
 type Stats = { reports: number; responses: number; by_outcome: Record<string, number>; decisions_improved: number };
 
 export default function Admin() {
   const [token, setToken] = useState("");
   const [rows, setRows] = useState<DS[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [ins, setIns] = useState<Insights | null>(null);
   const [onlyUnverified, setOnlyUnverified] = useState(true);
   const [who, setWho] = useState("");
   const [edits, setEdits] = useState<Record<string, string>>({});
@@ -18,12 +20,13 @@ export default function Admin() {
   async function load() {
     setError(null);
     try {
-      const [a, b] = await Promise.all([
+      const [a, b, c] = await Promise.all([
         fetch(`/api/admin/datasheets?only_unverified=${onlyUnverified}`, { headers: h }),
         fetch(`/api/admin/stats`, { headers: h }),
+        fetch(`/api/admin/insights`, { headers: h }),
       ]);
       if (!a.ok) throw new Error((await a.json()).detail);
-      setRows(await a.json()); setStats(await b.json());
+      setRows(await a.json()); setStats(await b.json()); setIns(await c.json());
     } catch (e) { setError((e as Error).message); }
   }
   async function verify(d: DS) {
@@ -52,6 +55,21 @@ export default function Admin() {
           <h2 className="font-semibold">North-star: decisions improved</h2>
           <p className="mt-1">{stats.decisions_improved} of {stats.responses} responses ({stats.reports} reports total)</p>
           <p className="text-sm text-muted">{Object.entries(stats.by_outcome).map(([k, n]) => `${k}: ${n}`).join(" · ") || "No responses yet"}</p>
+        </Card>
+      )}
+      {ins && (
+        <Card>
+          <h2 className="font-semibold">What users decide after each finding</h2>
+          <p className="text-sm text-muted">{ins.note} Willing to pay: {Object.entries(ins.would_pay).map(([k, n]) => `${k} ${n}`).join(" · ")}.</p>
+          {ins.rules.length === 0 ? <p className="mt-2 text-sm text-muted">No responses yet.</p> : (
+            <table className="w-full text-sm mt-2">
+              <thead><tr className="text-muted"><th className="text-start py-1">Rule</th><th className="text-start">Finding</th><th className="text-start">Responses</th><th className="text-start">Decisions</th></tr></thead>
+              <tbody>{ins.rules.map((r) => (
+                <tr key={r.rule_id} className="border-t border-line align-top"><td className="py-1">{r.rule_id}</td><td>{r.title}</td><td>{r.responses}</td>
+                  <td>{Object.entries(r.by_outcome).map(([k, n]) => `${k}: ${n}`).join(" · ")}</td></tr>
+              ))}</tbody>
+            </table>
+          )}
         </Card>
       )}
       {rows && rows.length === 0 && <p className="text-muted">Nothing to review.</p>}

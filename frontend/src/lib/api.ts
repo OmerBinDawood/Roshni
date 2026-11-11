@@ -70,6 +70,8 @@ export const api = {
     fetch(`/api${path}`, { headers: await headers(extra) }).then(handle<T>),
   post: async <T,>(path: string, body: unknown, extra?: Record<string, string>) =>
     fetch(`/api${path}`, { method: "POST", headers: await headers({ "content-type": "application/json", ...extra }), body: JSON.stringify(body) }).then(handle<T>),
+  put: async <T,>(path: string, body: unknown) =>
+    fetch(`/api${path}`, { method: "PUT", headers: await headers({ "content-type": "application/json" }), body: JSON.stringify(body) }).then(handle<T>),
   upload: async <T,>(path: string, form: FormData) =>
     fetch(`/api${path}`, { method: "POST", headers: await headers(), body: form }).then(handle<T>),
   del: async <T,>(path: string, extra?: Record<string, string>) =>

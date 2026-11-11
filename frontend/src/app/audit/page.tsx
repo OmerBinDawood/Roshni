@@ -5,9 +5,10 @@ import BillLookup from "@/components/BillLookup";
 import FilePick from "@/components/FilePick";
 import ProfileForm from "@/components/ProfileForm";
 import { Button, Card, Consent, ErrorBox, Issues, Num } from "@/components/ui";
-import { api, defaultProfile, ITEM_TYPES, rs, type Bill, type Issue, type LineItem, type Profile, type Quote, type Spec, type SystemConfig } from "@/lib/api";
+import { api, ITEM_TYPES, rs, type Bill, type Issue, type LineItem, type Quote, type Spec, type SystemConfig } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 import { deviceReports, ownerToken } from "@/lib/supabase";
+import { savedBill, usePersistedProfile } from "@/lib/shared";
 
 type Match = { kind: string; brand: string; model: string; match: number; verified: boolean };
 
@@ -30,7 +31,9 @@ export default function AuditPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [bill, setBill] = useState<Bill | null>(null);
-  const [profile, setProfile] = useState<Profile>(defaultProfile);
+  const [profile, setProfile, profileFrom] = usePersistedProfile();
+  const [decoded, setDecoded] = useState<Bill | null>(null);
+  useEffect(() => { queueMicrotask(() => setDecoded(savedBill.get())); }, []);
   const stepName = steps[step];
 
   // Re-run the deterministic validator whenever the user edits the quote on the confirm step
@@ -63,7 +66,7 @@ export default function AuditPage() {
     fd.append("consent", String(consent));
     const r = await run("Reading your bill…", () => api.upload<{ bill: Bill; warnings: string[] }>("/extract/bill", fd));
     if (r) {
-      setBill(r.bill); setBillWarnings(r.warnings);
+      setBill(r.bill); setBillWarnings(r.warnings); savedBill.set(r.bill);
       if (r.bill.phase) setProfile((p) => ({ ...p, phase: r.bill.phase }));
       if (r.bill.net_metered) setProfile((p) => ({ ...p, net_metering_agreement_date: p.net_metering_agreement_date ?? "2025-01-01" }));
     }
@@ -126,6 +129,12 @@ export default function AuditPage() {
       {stepName === "Bill" && (
         <Card className="space-y-4">
           <p className="text-muted">Your latest electricity bill already shows 12 months of units. It lets Roshni use your real price per unit.</p>
+          {!bill && decoded && (
+            <div className="rounded-xl bg-leaf/10 border border-leaf/30 p-3 text-sm flex flex-wrap gap-2 items-center justify-between">
+              <span>You already decoded a bill{decoded.current_units ? ` (${decoded.current_units} units this month)` : ""}. Use it here?</span>
+              <Button onClick={() => { setBill(decoded); if (decoded.phase) setProfile((p) => ({ ...p, phase: decoded.phase })); }}>Use my decoded bill</Button>
+            </div>
+          )}
           {!bill && <FilePick files={billFile} onChange={setBillFile} multiple={false} label="Upload your latest electricity bill" />}
           {!bill && !consent && <Consent checked={consent} onChange={setConsent} />}
           {!bill && (
@@ -155,7 +164,7 @@ export default function AuditPage() {
 
       {stepName === "Home" && (
         <Card className="space-y-4">
-          <ProfileForm value={profile} onChange={setProfile} showRegime={mode === "full"} />
+          <ProfileForm key={profileFrom} value={profile} onChange={setProfile} showRegime={mode === "full"} />
           {mode === "full" && bill?.monthly_units_history?.length ? (
             <label className="!text-ink !text-sm flex items-center gap-2">
               <input type="checkbox" className="w-4 h-4" checked={profile.scale_to_bill}

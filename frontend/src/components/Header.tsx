@@ -14,6 +14,7 @@ export default function Header() {
           Roshni <span className="urdu font-normal text-muted text-base">روشنی</span>
         </Link>
         <nav className="flex items-center gap-1 text-sm">
+          <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/size">Size</Link>
           <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/audit">Audit</Link>
           <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/bill">Bill</Link>
           <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/battery">Battery</Link>

@@ -12,10 +12,11 @@ from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from google.genai import errors as genai_errors  # noqa: E402
 from pydantic import BaseModel, Field  # noqa: E402
 
-from . import billfetch, db, gemini  # noqa: E402
+from . import assistant_tools, billfetch, db, gemini  # noqa: E402
 from .auth import optional_user, required_user  # noqa: E402
 from .engine.audit import battery_options, run_audit  # noqa: E402
 from .engine.data import cities, regulatory  # noqa: E402
+from .engine.sizing import SizeReq, size_solar  # noqa: E402
 from .engine.readiness import ReadinessIn, check as readiness_check  # noqa: E402
 from .engine.validate import validate_quote  # noqa: E402
 from .schemas import AuditRequest, Bill, Profile, Quote, SystemConfig  # noqa: E402
@@ -336,6 +337,14 @@ def battery(r: BatteryReq):
         raise HTTPException(400, str(e))
 
 
+@app.post("/api/size")
+def size_my_solar(r: SizeReq):
+    try:
+        return size_solar(r)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 @app.post("/api/readiness")
 def readiness(r: ReadinessIn):
     return readiness_check(r)
@@ -373,7 +382,7 @@ def chat(r: ChatReq):
     if r.messages[-1].role != "user" or not r.messages[-1].content.strip():
         raise HTTPException(400, "Ask a question first.")
     ctx = _report_context(r.report_id) if r.report_id else None
-    return {"reply": _guard(gemini.chat, [m.model_dump() for m in r.messages], ctx)}
+    return {"reply": _guard(gemini.chat, [m.model_dump() for m in r.messages], ctx, None, assistant_tools.TOOLS)}
 
 
 @app.post("/api/chat/upload")
@@ -390,7 +399,7 @@ async def chat_upload(messages: str = Form(...), report_id: Optional[str] = Form
     if not msgs or msgs[-1]["role"] != "user":
         raise HTTPException(400, "Ask a question first.")
     ctx = _report_context(report_id) if report_id else None
-    return {"reply": _guard(gemini.chat, msgs, ctx, data)}
+    return {"reply": _guard(gemini.chat, msgs, ctx, data, assistant_tools.TOOLS)}
 
 
 # ---------- admin: datasheet review queue + north-star metric ----------
@@ -423,6 +432,34 @@ def admin_verify(did: str, r: VerifyReq, x_admin_token: Optional[str] = Header(d
 def admin_stats(x_admin_token: Optional[str] = Header(default=None)):
     _admin(x_admin_token)
     return db.outcome_stats()
+
+
+@app.get("/api/admin/insights")
+def admin_insights(x_admin_token: Optional[str] = Header(default=None)):
+    _admin(x_admin_token)
+    return db.outcome_insights()
+
+
+# ---------- saved household profile (signed-in users) ----------
+@app.get("/api/me/profile")
+def my_profile(user: dict = Depends(required_user)):
+    return {"profile": db.get_profile(user["sub"])}
+
+
+@app.put("/api/me/profile")
+def save_my_profile(profile: Profile, user: dict = Depends(required_user)):
+    db.put_profile(user["sub"], profile.model_dump(mode="json"))
+    return {"saved": True}
+
+
+# ---------- read inverter-app screenshot for the health check ----------
+@app.post("/api/extract/readings")
+async def extract_readings(files: list[UploadFile] = File(default=[]), consent: Optional[str] = Form(default=None)):
+    _consent(consent)
+    data = await _read(files)
+    if not data:
+        raise HTTPException(400, "Upload a screenshot or photo of your inverter app or generation meter.")
+    return _guard(gemini.readings_from_image, data)
 
 
 # ---------- compare quotes, health check, financing ----------

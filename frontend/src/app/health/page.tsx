@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Button, Card, ErrorBox, Num } from "@/components/ui";
+import FilePick from "@/components/FilePick";
+import { Button, Card, Consent, ErrorBox, Num } from "@/components/ui";
 import { api } from "@/lib/api";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -25,12 +26,25 @@ export default function Health() {
   const [out, setOut] = useState<Out | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [shot, setShot] = useState<File[]>([]);
+  const [consent, setConsent] = useState(false);
+  const [shotNote, setShotNote] = useState<string | null>(null);
   useEffect(() => {
     api.get<{ cities: string[] }>("/meta").then((m) => setCities(m.cities)).catch(() => {});
     // Default to last month (computed in the browser, not during prerender)
     const last = new Date().getMonth() || 12;
     queueMicrotask(() => setReadings((r) => (r.length === 1 && r[0].kwh === null ? [{ month: last, kwh: null }] : r)));
   }, []);
+
+  async function readShot() {
+    setBusy(true); setError(null); setShotNote(null);
+    const fd = new FormData(); shot.forEach((f) => fd.append("files", f)); fd.append("consent", String(consent));
+    try {
+      const r = await api.upload<{ readings: { month: number; kwh: number }[]; note: string | null }>("/extract/readings", fd);
+      if (r.readings.length) setReadings(r.readings.map((x) => ({ month: x.month, kwh: x.kwh })));
+      setShotNote((r.readings.length ? `Filled in ${r.readings.length} month(s) from your screenshot. Please check them against the app. ` : "No monthly values could be read. ") + (r.note ?? ""));
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  }
 
   async function go() {
     setBusy(true); setError(null);
@@ -62,6 +76,12 @@ export default function Health() {
         </div>
         <fieldset className="space-y-2">
           <legend className="font-semibold">Solar units generated</legend>
+          <div className="rounded-xl bg-bg p-3 space-y-2">
+            <FilePick files={shot} onChange={setShot} label="Easier: upload a screenshot of your inverter app's monthly generation (optional)" />
+            {shot.length > 0 && <Consent checked={consent} onChange={setConsent} />}
+            {shot.length > 0 && <Button variant="ghost" onClick={readShot} disabled={busy || !consent}>{busy ? "Reading…" : "Read my screenshot"}</Button>}
+            {shotNote && <p className="text-sm text-info">{shotNote}</p>}
+          </div>
           {readings.map((r, i) => (
             <div key={i} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
               <div><label htmlFor={`m${i}`}>Month</label>

@@ -4,6 +4,7 @@ import BillLookup from "@/components/BillLookup";
 import FilePick from "@/components/FilePick";
 import { Button, Card, Consent, ErrorBox, Issues } from "@/components/ui";
 import { api, rs, type Bill } from "@/lib/api";
+import { savedBill } from "@/lib/shared";
 import { useLang } from "@/lib/i18n";
 
 type Line = { label: string; amount_rs: number | null; explanation_en: string; explanation_ur: string; solar_can_reduce: "yes" | "partly" | "no" };
@@ -20,7 +21,7 @@ export default function BillPage() {
   async function decode() {
     setBusy(true); setError(null);
     const fd = new FormData(); fd.append("file", files[0]); fd.append("consent", String(consent));
-    try { setD(await api.upload<Decoded>("/extract/bill", fd)); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try { const r = await api.upload<Decoded>("/extract/bill", fd); savedBill.set(r.bill); setD(r); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
   const b = d?.bill;
@@ -39,7 +40,7 @@ export default function BillPage() {
         </Card>
       )}
       {!d && (
-        <BillLookup<Decoded> onResult={setD} />
+        <BillLookup<Decoded> onResult={(r) => { savedBill.set(r.bill); setD(r); }} />
       )}
       {d && b && (
         <>
@@ -89,6 +90,15 @@ export default function BillPage() {
             <Button onClick={() => { setD(null); setFiles([]); }} variant="ghost">Decode another bill</Button>
             <Button onClick={() => window.dispatchEvent(new Event("roshni:open-assistant"))}>💬 Ask about my bill</Button>
           </div>
+          <Card className="space-y-2">
+            <h2 className="font-semibold">Use this bill for your next step</h2>
+            <p className="text-sm text-muted">Your decoded bill is kept in this browser tab, so you do not need to upload it again.</p>
+            <div className="flex gap-2 flex-wrap">
+              <a href="/audit" className="rounded-xl px-4 py-2.5 bg-sun font-semibold">Check a solar quote with this bill</a>
+              <a href="/battery" className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">Should I add a battery?</a>
+              <a href="/readiness" className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">Is my home ready for solar?</a>
+            </div>
+          </Card>
         </>
       )}
     </div>

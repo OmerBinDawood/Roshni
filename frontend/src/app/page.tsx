@@ -6,6 +6,7 @@ export default function Home() {
   const { t } = useLang();
   const cards = [
     { href: "/audit", icon: "🧾", title: t("checkQuote"), desc: t("checkQuoteD"), primary: true },
+    { href: "/size", icon: "📐", title: "Size my solar", desc: "Enter your appliances and bill: see system sizes, cost ranges, savings, backup, and the brands to look at." },
     { href: "/bill", icon: "💡", title: t("decodeBill"), desc: t("decodeBillD") },
     { href: "/battery", icon: "🔋", title: t("battery"), desc: t("batteryD") },
     { href: "/audit?mode=parts", icon: "🧰", title: "Buying parts yourself?", desc: "Check that panels, inverter and battery work together safely before you buy." },

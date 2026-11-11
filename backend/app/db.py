@@ -67,6 +67,13 @@ outcomes = Table(
     Column("reported_at", DateTime(timezone=True), default=now),
 )
 
+profiles = Table(
+    "user_profiles", meta,
+    Column("user_id", String(64), primary_key=True),
+    Column("data", JSON),
+    Column("updated_at", DateTime(timezone=True), default=now),
+)
+
 meta.create_all(engine)
 
 
@@ -94,7 +101,7 @@ if engine.dialect.name == "postgresql":
     from sqlalchemy import text
 
     with engine.begin() as _c:
-        for _t in ("reports", "datasheets", "decision_outcomes"):
+        for _t in ("reports", "datasheets", "decision_outcomes", "user_profiles"):
             _c.execute(text(f"alter table public.{_t} enable row level security"))
 
 
@@ -180,12 +187,32 @@ def delete_report(rid: str) -> bool:
 
 
 def delete_user_reports(user_id: str) -> int:
+    delete_profile(user_id)
     with engine.begin() as c:
         ids = [r[0] for r in c.execute(select(reports.c.id).where(reports.c.user_id == user_id)).all()]
         if ids:
             c.execute(delete(outcomes).where(outcomes.c.report_id.in_(ids)))
             c.execute(delete(reports).where(reports.c.id.in_(ids)))
     return len(ids)
+
+
+# ---------- saved household profile ----------
+def get_profile(user_id: str) -> dict | None:
+    with engine.begin() as c:
+        r = c.execute(select(profiles.c.data).where(profiles.c.user_id == user_id)).first()
+    return r[0] if r else None
+
+
+def put_profile(user_id: str, data: dict) -> None:
+    with engine.begin() as c:
+        n = c.execute(update(profiles).where(profiles.c.user_id == user_id).values(data=data, updated_at=now())).rowcount
+        if not n:
+            c.execute(insert(profiles).values(user_id=user_id, data=data, updated_at=now()))
+
+
+def delete_profile(user_id: str) -> None:
+    with engine.begin() as c:
+        c.execute(delete(profiles).where(profiles.c.user_id == user_id))
 
 
 # ---------- datasheets ----------
@@ -257,3 +284,25 @@ def outcome_stats() -> dict:
     changed = sum(v for k, v in counts.items() if k in ("renegotiated", "changed_config", "added_protection", "walked_away"))
     return {"reports": n_reports, "responses": len(rows), "by_outcome": counts,
             "decisions_improved": changed, "json": json.dumps(counts)}
+
+
+def outcome_insights() -> dict:
+    """Which audit findings go with which decisions. Counts only; no scores, no personal data."""
+    with engine.begin() as c:
+        rows = c.execute(select(outcomes.c.report_id, outcomes.c.outcome, outcomes.c.would_pay)).all()
+        reps = {r[0]: r[1] for r in c.execute(select(reports.c.id, reports.c.report)).all()}
+    per_rule: dict = {}
+    pay = {"yes": 0, "maybe": 0, "no": 0}
+    for rid, outcome, would_pay in rows:
+        if would_pay in pay:
+            pay[would_pay] += 1
+        rep = reps.get(rid) or {}
+        for f in rep.get("findings", []):
+            if f.get("severity") in ("CRITICAL", "CLARIFY"):
+                d = per_rule.setdefault(f["rule_id"], {"title": f.get("title"), "severity": f["severity"], "responses": 0, "by_outcome": {}})
+                d["responses"] += 1
+                d["by_outcome"][outcome] = d["by_outcome"].get(outcome, 0) + 1
+    ranked = sorted(per_rule.items(), key=lambda kv: -kv[1]["responses"])
+    return {"responses": len(rows), "would_pay": pay,
+            "rules": [{"rule_id": k, **v} for k, v in ranked],
+            "note": "Counts of decisions among users whose report triggered each rule. Use to tune wording and priorities once there are enough responses."}

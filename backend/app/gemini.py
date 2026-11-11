@@ -125,6 +125,26 @@ def lookup_specs(kind: Literal["panel", "inverter", "battery"], brand: str, mode
         return schema(source=data.get("source"), verified=False)
 
 
+# ---------- Inverter-app screenshot -> monthly generation (health check) ----------
+class _Reading(BaseModel):
+    month: int = Field(ge=1, le=12, description="Calendar month 1-12")
+    kwh: float = Field(ge=0, description="Solar units (kWh) generated in that month")
+
+
+class _Readings(BaseModel):
+    readings: list[_Reading] = Field(default_factory=list)
+    note: Optional[str] = Field(None, description="Anything the user should double check, e.g. only daily values were visible")
+
+
+def readings_from_image(files: list[tuple[bytes, str]]) -> dict:
+    sys = (DOC_GUARD + " The image is a screenshot or photo from a solar inverter app, monitoring portal or generation meter. "
+           "Extract MONTHLY solar generation in kWh (units) per calendar month. Do not convert daily numbers into monthly ones: "
+           "if only daily or lifetime totals are visible, return no readings and say so in note. Do not estimate.")
+    out = _structured(_parts(files, None) + ["Extract the monthly solar generation."], _Readings, sys)
+    seen = {r.month: r.kwh for r in out.readings}
+    return {"readings": [{"month": m, "kwh": v} for m, v in sorted(seen.items())], "note": out.note}
+
+
 # ---------- Assistant ("Roshni Madadgar") ----------
 from .engine.brands import knowledge_text  # noqa: E402
 
@@ -134,8 +154,12 @@ ASSISTANT_SYS = f"""You are Roshni Madadgar, the helper inside Roshni, an indepe
 Rules:
 - Reply in the user's language: English, Urdu script, or Roman Urdu (match what they wrote). Keep it to 3 to 5 short sentences
   unless they ask for detail ("tafseel se batayein").
-- Never invent numbers. Only quote numbers that appear in the CONTEXT JSON (the user's own report/bill) or the KNOWLEDGE BASE,
-  and mention the "as of" date for prices and rules. If a number is not available, say what Roshni would need to calculate it.
+- Never invent numbers. Only quote numbers that appear in the CONTEXT JSON (the user's own report/bill), the KNOWLEDGE BASE,
+  or the result of a tool you called, and mention the "as of" date for prices and rules. If a number is not available, say what
+  Roshni would need to calculate it.
+- You have tools that run Roshni's own calculators (battery sizes, loan check, readiness, comparing reports). Use a tool when the
+  user asks for such a number and you have the inputs; ask for missing inputs instead of guessing them. Say the numbers are
+  indicative and point to the matching page (/battery, /financing, /readiness, /compare) for the full view.
 - No brand rankings or "best inverter" answers; explain how to compare instead. You may describe any brand factually from
   the brand guide below (who makes it, what it is, how to verify it) and always add the checks that matter.
 - Safety issues (burning smell, sparking, water ingress, structural cracks): tell them to switch off and call a qualified
@@ -148,7 +172,7 @@ KNOWLEDGE BASE:
 """
 
 
-def chat(messages: list[dict], context: dict | None, files: list[tuple[bytes, str]] | None = None) -> str:
+def chat(messages: list[dict], context: dict | None, files: list[tuple[bytes, str]] | None = None, tools: list | None = None) -> str:
     """Assistant turn. Optional files (quote/bill photo or PDF) attach to the latest user message as untrusted data."""
     contents = []
     recent = messages[-20:]
@@ -165,7 +189,7 @@ def chat(messages: list[dict], context: dict | None, files: list[tuple[bytes, st
     sys_ = ASSISTANT_SYS + ("\nCONTEXT JSON (the user's current results):\n" + json.dumps(context, ensure_ascii=False, default=str)[:30000]
                             if context else "\nCONTEXT: the user has no report yet.")
     resp = client().models.generate_content(
-        model=MODEL, contents=contents, config=types.GenerateContentConfig(system_instruction=sys_, temperature=0.3))
+        model=MODEL, contents=contents, config=types.GenerateContentConfig(system_instruction=sys_, temperature=0.3, tools=tools or None))
     return resp.text or ""
 
 
