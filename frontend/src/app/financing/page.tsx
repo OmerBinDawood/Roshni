@@ -2,6 +2,7 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Button, Card, ErrorBox, Num } from "@/components/ui";
+import { useLang } from "@/lib/i18n";
 import { api, rs } from "@/lib/api";
 
 type Out = { principal: number; instalment: number; total_paid: number; total_markup: number; gap_expected?: number; gap_conservative?: number;
@@ -13,6 +14,7 @@ export default function Page() {
 }
 
 function Financing() {
+  const { lang } = useLang();
   const params = useSearchParams();
   const [amount, setAmount] = useState<number | null>(900000);
   const [down, setDown] = useState<number | null>(0);
@@ -45,7 +47,7 @@ function Financing() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold">Loan instalment vs your savings <span className="urdu font-normal text-muted">· قسط بمقابلہ بچت</span></h1>
+      <h1 className="text-2xl font-bold">Loan instalment vs your savings {lang === "ur" && <span className="urdu font-normal text-muted">· قسط بمقابلہ بچت</span>}</h1>
       <p className="text-muted">Will a solar loan&apos;s monthly instalment be more than what solar saves you? Enter the bank&apos;s offer.
         {fromReport && " Price and savings were filled in from your report."}</p>
       <ErrorBox error={error} />

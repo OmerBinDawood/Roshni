@@ -15,18 +15,18 @@ Roshni is a working, tested web platform that gives Pakistani households an inde
 | Item | Count |
 |---|---|
 | Page routes | 16 (home, size, audit, report, bill, battery, readiness, learn, compare, health, financing, guides, brands, account, about, admin) |
-| API endpoints | 36 |
-| Audit rules | 26 (R01 to R25 from the PRD catalogue, plus R26 for roof orientation) |
+| API endpoints | 40 |
+| Audit rules | 27 (R01 to R25 from the PRD catalogue, plus R26 for roof orientation and R27 for quote vs sizing) |
 | Cities with hourly weather | 35 |
 | Brand profiles | 37 |
-| Backend automated tests | 55, all passing |
+| Backend automated tests | 59, all passing |
 | Live end-to-end checks with real AI and database | 40 core + 17 adversarial (build day), plus 19 and 14 re-run on the final code, all passing |
 | Bugs found by testing and fixed | 9 in the final build pass, earlier fixes in section 10, and 1 more found in the post-build review (sign-in clock skew) |
 | Commits on GitHub main | 7 (the review fix and these docs are local and unpushed) |
 
 The code lives at OmerBinDawood/Roshni. The rest of this document explains each feature, the approach and technology behind it, the business rules, and every step taken to build it.
 
-> **Corrections in this version.** The first draft said 18 pages (and "all 17 pages load"); the code has 15 page routes, and all 15 return HTTP 200. The test count was 41; it is now 55 after the sign-in fix, the gap-closing work, the sizing journey and brand prices. Everything else in the first draft was checked against the code and matched: 26 rules, 35 cities, 37 brands, 7 commits, versions of the main libraries.
+> **Corrections in this version.** The first draft said 18 pages (and "all 17 pages load"); the code has 15 page routes, and all 15 return HTTP 200. The test count was 41; it is now 59 after the sign-in fix, the gap-closing work, the sizing journey and brand prices. Everything else in the first draft was checked against the code and matched: 26 rules, 35 cities, 37 brands, 7 commits, versions of the main libraries.
 
 ## 2. Starting point and guiding decisions
 
@@ -94,7 +94,7 @@ backend/
   app/auth.py          Supabase token verification
   app/assistant_tools.py  calculators the assistant can call (Gemini function calling)
   app/billfetch.py     official bill-portal client
-  tests/               55 tests
+  tests/               59 tests
 frontend/
   src/app/             one folder per page (report view: app/report/[id]/ReportView.tsx; size my solar: app/size)
   src/components/      Assistant, ProfileForm, FilePick, BillLookup, Header, ui
@@ -203,6 +203,7 @@ Rules are written as code with plain-language messages. Each returns CRITICAL, C
 | R24 | Installer certification (AEDB) | Info |
 | R25 | On-grid inverter quoted for someone who needs backup | Critical |
 | R26 | Roof direction and tilt (output lost vs south at about 20°) | Info / Clarify |
+| R27 | Quote size and total price vs Roshni's own sizing for the household | Clarify / Info / OK |
 
 The string-voltage rule is the clearest example of the engine at work:
 
@@ -263,7 +264,7 @@ This section lists every rule that changes what a user sees, with its threshold 
 - Cash flow: 25 years; 0.5% yearly degradation; inverter replaced in year 11 (the quoted inverter price, or 20% of the total if unpriced); battery replaced every 10 years; payback is the first year the cumulative figure turns positive.
 - Bill scaling: when the user agrees, modelled monthly load is multiplied to match the bill history; months with no bill data use the average factor. A prompt appears when a month differs by more than 20%.
 
-**F. The 26 audit rules, thresholds and wording**
+**F. The 27 audit rules, thresholds and wording**
 
 | Rule | Fires when | Severity |
 |---|---|---|
@@ -293,6 +294,7 @@ This section lists every rule that changes what a user sees, with its threshold 
 | R24 | Net billing, grid-connected: ask about AEDB/PPIB certification | Info |
 | R25 | On-grid inverter and the user wants backup | Critical |
 | R26 | Orientation loses 8% or more of output against south at about 20° (Clarify from 20%) | Info / Clarify |
+| R27 | Full mode only, with a household profile. Roshni runs its own sizing for the same household and inverter type (on-grid, or hybrid with the nearest of 5 or 10 kWh). Quote more than 1.3 times the sized kW (and at least 1 kW more): Clarify. Less than 0.6 times (and at least 1 kW less): Info. Otherwise OK. Separately, total price above 1.15 times the indicative cost range for the quote's own size: Clarify; below 0.7 times the low end: Info (check what is missing). Never breaks an audit if sizing fails | Clarify / Info / OK |
 
 R12 to R16 accept an item as listed when its item type matches or any line's text mentions it, so bundled lines such as "structure, wiring, earthing, SPD" are marked "mentioned but not itemised" rather than missing.
 
@@ -453,6 +455,7 @@ Roshni stores data in Supabase Postgres, locks it away from Supabase's public AP
 | reports | Confirmed request + full report JSON, mode, title, user_id, hash of the creator's private token | Powers share links, history and compare |
 | datasheets | Specs per brand + model, source URL, verified flag, reviewer, times seen | The catalogue and its review queue |
 | decision_outcomes | What the user decided after the report, and willingness to pay | The PRD's north-star metric; joined to reports for per-rule insights |
+| sizings | Saved sizing request and result, owner and creator-token hash, title | Share link, account history; same ownership model as reports; deleted with "delete all" |
 | user_profiles | One saved household profile per signed-in user | Deleted with "delete all my reports"; row-level security on |
 
 - One code path: `DATABASE_URL` points at Supabase; without it, a local SQLite file is used. Tests always use a throwaway SQLite file.
@@ -601,7 +604,17 @@ The platform was built in seven phases on 11 November 2026, ending in seven comm
 3. Found and fixed the sign-in clock-skew bug; added a regression test (42 tests).
 4. Mapped how features connect and where they do not; wrote [PLATFORM.md](PLATFORM.md) and the business-rule catalogue in section 5.7.
 
-**Phase 11 (per-brand prices, local, not yet pushed)**
+**Phase 13 (quote vs sizing, saved sizings, English-only mode, run and presentation docs, local, not yet pushed)**
+1. Rule R27 compares a quote's size and price with Roshni's own sizing; sizing was made lazy (stops once extra size no longer pays) so audits stay near 3 seconds.
+2. Sizing results are saved automatically (new `sizings` table, share link, PDF, claim, delete, list in the account).
+3. English mode no longer shows any Urdu text (headings, logo, language switch, assistant subtitle); verified on the server-rendered HTML of all 17 routes.
+4. New docs: RUN_GUIDE (run, admin token and endpoints, deploy), USER_GUIDE, PRESENTATION. 3 more tests (59).
+
+**Phase 12 (gap review, committed with phase 13)**
+1. Reviewed every page, endpoint and link; listed the remaining gaps in PLATFORM.md section 9.
+2. Fixed three small ones on the spot: `/brands` now shows the price listings and the re-verify warning, `/brands` links to `/size`, and the README was brought up to date. 1 new test (56 total).
+
+**Phase 11 (per-brand prices, committed and pushed)**
 1. Searched retailer pages and price guides (W11stop, Powerhouse Express, Zell, PhoneWorld, SolarApp, news) for panel, hybrid inverter and lithium battery prices; recorded each with source, date if shown and a confidence label; left out figures that looked wrong (for example an AIKO panel at Rs 85 to 110 per watt and a Pylontech UP-5000 at Rs 550,000) and noted conflicts.
 2. Added `brand_prices.json`, price fields on the brand lists, `/api/size/estimate` and the "Build your own estimate with brands" card; the assistant's knowledge base now includes the listings with dates and the re-verify warning.
 3. Lowered the panel low end in the sizing costs to Rs 37 per watt after early-November news of Karachi dealers near that level.
@@ -634,6 +647,8 @@ The platform was built in seven phases on 11 November 2026, ending in seven comm
 | 54ad7d1 | 11:17 | MVP: quote audit, bill decoder, battery advisor, assistant | 54 files, +9,714 |
 
 ## 12. Running, configuring and deploying
+
+> The full, up-to-date run, admin and deploy guide is [RUN_GUIDE.md](RUN_GUIDE.md); how to guide users is [USER_GUIDE.md](USER_GUIDE.md); a talk outline with the library list is [PRESENTATION.md](PRESENTATION.md).
 
 Roshni runs locally with two commands once its two environment files are filled in. It has not been deployed to a public host yet.
 
@@ -706,7 +721,7 @@ The platform is complete for the PRD's first release, but four things remain unv
 | Full Urdu interface | Reports, lessons, bill explanations, verdicts and the assistant are bilingual; most form labels are still English |
 | Brand rankings, shortlists and installer listings | PRD sections 7 and 13 (independence) and 1.2 (no installer directory); the brand guide is neutral and alphabetical |
 
-**Feature gaps found in the post-build review** (details in [PLATFORM.md](PLATFORM.md) section 5): six were closed in phase 9 and the sizing journey was added in phase 10. Still open: readiness and the health check do not hand data to the audit; brand prices need a regular refresh and have gaps (see PLATFORM.md section 8).
+**Feature gaps found in the post-build review** (details in [PLATFORM.md](PLATFORM.md) section 5): six were closed in phase 9 and the sizing journey was added in phase 10. Open items are ranked in PLATFORM.md section 9: no rate limits on AI endpoints, not deployed, stale brand prices, sizing simplifications, Urdu partial, no real-data validation.
 
 **Recommended next steps, in order:** run the PRD's concierge pilot with 30 to 50 real quotes; verify the datasheets in the review queue; deploy to a public host; translate the remaining form labels into Urdu; add error monitoring (the PRD suggests Sentry and PostHog).
 

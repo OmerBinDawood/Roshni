@@ -6,8 +6,9 @@ import { api } from "@/lib/api";
 type Brand = {
   id: string; name: string; aliases: string[]; categories: string[]; kind: string; origin: string; about: string;
   technology: string; pakistan: string; verify: { label: string; url: string | null } | null; sources: string[];
+  prices: { category: string; product: string; unit: string; low: number; high: number; as_of: string | null; confidence: string; source: string; note?: string }[];
 };
-type Guide = { as_of: string; policy: string; category_labels: Record<string, string>; category_checks: Record<string, string[]>; brands: Brand[] };
+type Guide = { price_disclaimer: string; price_as_of: string; as_of: string; policy: string; category_labels: Record<string, string>; category_checks: Record<string, string[]>; brands: Brand[] };
 const KIND: Record<string, string> = { international: "International manufacturer", "pakistan-market": "Pakistan-market brand" };
 
 export default function Brands() {
@@ -79,6 +80,15 @@ export default function Brands() {
                 <p>{b.about}</p>
                 <p><b>Technology:</b> {b.technology}</p>
                 <p><b>In Pakistan:</b> {b.pakistan}</p>
+                {b.prices.length > 0 ? (
+                  <div className="rounded-xl bg-sun/10 p-3 text-xs space-y-1">
+                    <div className="font-medium text-sm">Public price listings (collected {g.price_as_of})</div>
+                    {b.prices.map((p) => (
+                      <div key={p.product}><b>{p.unit === "per_w" ? `Rs ${p.low}${p.high !== p.low ? `–${p.high}` : ""} per watt` : `Rs ${p.low.toLocaleString("en-PK")}${p.high !== p.low ? `–${p.high.toLocaleString("en-PK")}` : ""}`}</b> · {p.product} · {p.as_of ? `listed ${p.as_of}` : "undated"} ({p.confidence}) · <a className="underline" href={p.source} target="_blank" rel="noreferrer">source</a>{p.note ? ` · ${p.note}` : ""}</div>
+                    ))}
+                    <div className="text-warn">Re-verify the exact model, price, grade and warranty with the seller in writing before you pay.</div>
+                  </div>
+                ) : <p className="text-xs text-muted">No public price listing found for this brand.</p>}
                 {b.verify && (
                   <p className="rounded-xl bg-leaf/10 p-3"><b>Verify:</b>{" "}
                     {b.verify.url ? <a className="underline" href={b.verify.url} target="_blank" rel="noreferrer">{b.verify.label}</a> : b.verify.label}
@@ -102,7 +112,7 @@ export default function Brands() {
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted">Profiles as of {g.as_of}. Information about local brands is limited; where Roshni could not confirm a fact, the profile says so. Looking for an installer? Check that they appear on the official AEDB/PPIB certified installer list and ask for references; Roshni does not list or recommend installers.</p>
+      <p className="text-xs text-muted">Profiles as of {g.as_of}. Information about local brands is limited; where Roshni could not confirm a fact, the profile says so. Want a system sized and costed for your home? <a className="underline" href="/size">Try Size my solar</a>. Looking for an installer? Check that they appear on the official AEDB/PPIB certified installer list and ask for references; Roshni does not list or recommend installers.</p>
     </div>
   );
 }

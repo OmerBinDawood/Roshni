@@ -74,6 +74,17 @@ profiles = Table(
     Column("updated_at", DateTime(timezone=True), default=now),
 )
 
+sizings = Table(
+    "sizings", meta,
+    Column("id", String(24), primary_key=True),
+    Column("created_at", DateTime(timezone=True), default=now),
+    Column("request", JSON),
+    Column("result", JSON),
+    Column("user_id", String(64), index=True),
+    Column("owner_token_hash", String(64)),
+    Column("title", String(200)),
+)
+
 meta.create_all(engine)
 
 
@@ -101,7 +112,7 @@ if engine.dialect.name == "postgresql":
     from sqlalchemy import text
 
     with engine.begin() as _c:
-        for _t in ("reports", "datasheets", "decision_outcomes", "user_profiles"):
+        for _t in ("reports", "datasheets", "decision_outcomes", "user_profiles", "sizings"):
             _c.execute(text(f"alter table public.{_t} enable row level security"))
 
 
@@ -188,12 +199,68 @@ def delete_report(rid: str) -> bool:
 
 def delete_user_reports(user_id: str) -> int:
     delete_profile(user_id)
+    delete_user_sizings(user_id)
     with engine.begin() as c:
         ids = [r[0] for r in c.execute(select(reports.c.id).where(reports.c.user_id == user_id)).all()]
         if ids:
             c.execute(delete(outcomes).where(outcomes.c.report_id.in_(ids)))
             c.execute(delete(reports).where(reports.c.id.in_(ids)))
     return len(ids)
+
+
+# ---------- saved sizing results (same ownership model as reports) ----------
+def save_sizing(request: dict, result: dict, user_id: str | None = None, title: str | None = None) -> tuple[str, str]:
+    import secrets
+    sid, token = new_id(), secrets.token_urlsafe(24)
+    with engine.begin() as c:
+        c.execute(insert(sizings).values(id=sid, request=request, result=result, created_at=now(), user_id=user_id,
+                                         owner_token_hash=_hash(token), title=(title or "")[:200]))
+    return sid, token
+
+
+def get_sizing(sid: str):
+    with engine.begin() as c:
+        r = c.execute(select(sizings.c.request, sizings.c.result).where(sizings.c.id == sid)).first()
+    return (r[0], r[1]) if r else None
+
+
+def can_manage_sizing(sid: str, user_id: str | None, token: str | None) -> bool | None:
+    with engine.begin() as c:
+        r = c.execute(select(sizings.c.user_id, sizings.c.owner_token_hash).where(sizings.c.id == sid)).first()
+    if r is None:
+        return None
+    if user_id and r[0] == user_id:
+        return True
+    return bool(token and r[1] and _hash(token) == r[1])
+
+
+def claim_sizing(sid: str, user_id: str) -> bool:
+    with engine.begin() as c:
+        return c.execute(update(sizings).where(sizings.c.id == sid).values(user_id=user_id)).rowcount > 0
+
+
+def delete_sizing(sid: str) -> bool:
+    with engine.begin() as c:
+        return c.execute(delete(sizings).where(sizings.c.id == sid)).rowcount > 0
+
+
+def delete_user_sizings(user_id: str) -> int:
+    with engine.begin() as c:
+        return c.execute(delete(sizings).where(sizings.c.user_id == user_id)).rowcount
+
+
+def list_user_sizings(user_id: str) -> list[dict]:
+    q = (select(sizings.c.id, sizings.c.created_at, sizings.c.title, sizings.c.result)
+         .where(sizings.c.user_id == user_id).order_by(sizings.c.created_at.desc()).limit(100))
+    with engine.begin() as c:
+        rows = c.execute(q).mappings().all()
+    out = []
+    for r in rows:
+        opts = (r["result"] or {}).get("options") or []
+        out.append({"id": r["id"], "created_at": r["created_at"].isoformat() if r["created_at"] else None, "title": r["title"],
+                    "options": [{"name": o["name"], "dc_kw": o["dc_kw"], "battery_kwh": o["battery_kwh"],
+                                 "cost_low": o["cost"]["low"], "cost_high": o["cost"]["high"]} for o in opts]})
+    return out
 
 
 # ---------- saved household profile ----------

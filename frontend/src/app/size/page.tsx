@@ -1,9 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import ProfileForm from "@/components/ProfileForm";
 import { Button, Card, ErrorBox, Num } from "@/components/ui";
 import { api, rs, type Bill } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
 import { savedBill, usePersistedProfile } from "@/lib/shared";
+import { ownerToken, useSession } from "@/lib/supabase";
 
 type Range = { low: number; high: number; mid: number; parts: Record<string, { low: number; high: number }> };
 type Option = {
@@ -16,6 +19,7 @@ type BrandRow = { id: string; name: string; kind: string; origin: string; about:
 type EstPart = { low: number; high: number; basis: string; product?: string; as_of?: string | null; source?: string; confidence?: string; why?: string };
 type Est = { parts: Record<string, EstPart>; total: { low: number; high: number }; notes: string[]; from_listings: string[]; disclaimer: string; budget_rs?: number; budget_verdict?: "within" | "maybe" | "over" };
 type Out = {
+  id?: string; owner_token?: string; saved_to_account?: boolean;
   summary: { annual_load_kwh: number; avg_monthly_units: number; daytime_share: number | null; bill_today_monthly_rs: number; effective_rate_rs: number;
     regime_label: string; roof_limit_kw: number | null };
   options: Option[]; brand_options: Record<string, { label: string; checks: string[]; brands: BrandRow[] }>;
@@ -28,6 +32,18 @@ const priceText = (p: Price) => p.unit === "per_w"
 const lakh = (n: number) => `Rs ${(n / 100000).toFixed(n >= 1000000 ? 1 : 2)} lakh`;
 
 export default function SizePage() {
+  return <Suspense fallback={<p className="text-muted">Loading…</p>}><Size /></Suspense>;
+}
+
+function Size() {
+  const params = useSearchParams();
+  const { lang } = useLang();
+  const { session } = useSession();
+  const [sid, setSid] = useState<string | null>(null);
+  const [canManage, setCanManage] = useState(false);
+  const [owned, setOwned] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const tok = (id: string) => { const t = ownerToken.get(id); return t ? { "x-owner-token": t } : undefined; };
   const [profile, setProfile, profileFrom] = usePersistedProfile();
   const [bill, setBill] = useState<Bill | null>(null);
   const [history, setHistory] = useState("");
@@ -46,6 +62,31 @@ export default function SizePage() {
 
   useEffect(() => { queueMicrotask(() => setBill(savedBill.get())); }, []);
 
+  // Open a saved sizing from its link (/size?id=...)
+  useEffect(() => {
+    const id = params.get("id");
+    if (!id) return;
+    api.get<{ request: { budget_rs: number | null; goal: "bill" | "backup" | "both" }; result: Out; can_manage: boolean }>(`/sizing/${id}`, tok(id))
+      .then(({ request, result, can_manage }) => {
+        setOut(result); setCat(Object.keys(result.brand_options)[0]); setOptIdx(0);
+        setBudgetLakh(request.budget_rs ? request.budget_rs / 100000 : null); setGoal(request.goal);
+        setSid(id); setCanManage(can_manage);
+      }).catch((e) => setError((e as Error).message));
+  }, [params]);
+
+  async function saveToAccount() {
+    if (!sid) return;
+    try { await api.post(`/sizing/${sid}/claim`, {}, tok(sid)); setOwned(true); } catch (e) { setError((e as Error).message); }
+  }
+  async function remove() {
+    if (!sid || !confirm("Delete this saved sizing? The share link will stop working.")) return;
+    try { await api.del(`/sizing/${sid}`, tok(sid)); ownerToken.remove(sid); setOut(null); setSid(null); window.history.replaceState(null, "", "/size"); }
+    catch (e) { setError((e as Error).message); }
+  }
+  async function copyLink() {
+    try { await navigator.clipboard.writeText(window.location.href); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch {}
+  }
+
   async function go() {
     setBusy(true); setError(null);
     const units = history.split(/[,\s]+/).filter(Boolean).map(Number).filter((n) => !isNaN(n) && n > 0);
@@ -53,6 +94,11 @@ export default function SizePage() {
     try {
       const r = await api.post<Out>("/size", { profile: { ...profile, goal }, bill: useBill, budget_rs: budgetLakh ? budgetLakh * 100000 : null, roof_area_sqft: roof, goal });
       setOut(r); setCat(Object.keys(r.brand_options)[0]); setOptIdx(0); setEst(null);
+      if (r.id) {
+        setSid(r.id); setCanManage(true); setOwned(!!r.saved_to_account);
+        if (r.owner_token) ownerToken.set(r.id, r.owner_token);
+        window.history.replaceState(null, "", `/size?id=${r.id}`);
+      }
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -69,17 +115,17 @@ export default function SizePage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold">Size my solar <span className="urdu font-normal text-muted">· میرا سولر کتنا ہونا چاہیے</span></h1>
+      <h1 className="text-2xl font-bold">Size my solar {lang === "ur" && <span className="urdu font-normal text-muted">· میرا سولر کتنا ہونا چاہیے</span>}</h1>
       <p className="text-muted">Tell Roshni what runs in your home and what your bill is. It works out your load, then shows a few system sizes with cost ranges, savings, payback and backup hours. Then it lists the brands for each part, with facts and checks, not rankings.</p>
       <ErrorBox error={error} />
 
-      <Card className="space-y-4">
+      <Card className="space-y-4 no-print">
         <h2 className="font-semibold">1. Your home</h2>
         <p className="text-xs text-muted">{profileFrom === "none" ? "Your answers are saved on this device so you only enter them once." : `Loaded from your ${profileFrom === "account" ? "account" : "last visit"}.`}</p>
         <ProfileForm key={profileFrom} value={profile} onChange={setProfile} showRegime />
       </Card>
 
-      <Card className="space-y-4">
+      <Card className="space-y-4 no-print">
         <h2 className="font-semibold">2. Your bill, budget and roof</h2>
         {bill?.monthly_units_history?.length ? (
           <p className="text-sm rounded-xl bg-leaf/10 text-leaf p-3">Using the bill you decoded ({bill.monthly_units_history.length} months of units). <a className="underline" href="/bill">Decode a different one</a>.</p>
@@ -101,6 +147,18 @@ export default function SizePage() {
 
       {out && (
         <>
+          {sid && (
+            <div className="no-print flex flex-wrap gap-2 items-center">
+              <Button variant="ghost" onClick={copyLink}>{copied ? "Copied ✓" : "🔗 Share link"}</Button>
+              <Button variant="ghost" onClick={() => window.print()}>🖨️ Save as PDF</Button>
+              {canManage && !owned && (session
+                ? <Button variant="ghost" onClick={saveToAccount}>💾 Save to my account</Button>
+                : <a href="/account" className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">💾 Sign in to save</a>)}
+              {owned && <span className="text-leaf text-sm">✓ Saved to your account</span>}
+              {canManage && <Button variant="ghost" onClick={remove}>🗑️ Delete</Button>}
+              <span className="text-xs text-muted">Saved automatically. Anyone with the link can view it.</span>
+            </div>
+          )}
           <Card className="space-y-2">
             <h2 className="font-semibold text-lg">Your load and your bill today</h2>
             <div className="grid sm:grid-cols-4 gap-3 text-sm">

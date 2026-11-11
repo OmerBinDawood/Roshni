@@ -101,7 +101,8 @@ def _pick(cands: list[dict]):
     return best
 
 
-def size_solar(req: SizeReq) -> dict:
+def size_solar(req: SizeReq, only: tuple[str, int] | None = None) -> dict:
+    """only=(kind, battery_kwh) restricts the plans (used by the audit cross-check to stay fast)."""
     p, bill = req.profile, req.bill
     roof = roof_limit_kw(req.roof_area_sqft)
     sizes = [s for s in SIZES_KW if roof is None or s <= roof] or [SIZES_KW[0]]
@@ -109,14 +110,33 @@ def size_solar(req: SizeReq) -> dict:
     plans: list[tuple[str, int]] = [("on_grid", 0)]
     if req.goal != "bill":
         plans += [("hybrid", b) for b in BATTERIES_KWH]
+    if only:
+        plans = [only]
     cands: dict[tuple, dict] = {}
     base = None
-    for s in sizes:  # weather, PV and load depend only on the size, so simulate once per size
-        model = energy_model(p, bill, dc_kw=s, ac_kw=_inverter_kw(s), inverter_type="hybrid", usable_kwh=0, batt_kw=0)
-        for kind, bat in plans:
-            c, extra = _candidate(p, bill, s, kind, bat, model)
+    models: dict[float, tuple] = {}  # weather, PV and load depend only on the size: simulate each size once
+
+    def model(size):
+        if size not in models:
+            models[size] = energy_model(p, bill, dc_kw=size, ac_kw=_inverter_kw(size), inverter_type="hybrid", usable_kwh=0, batt_kw=0)
+        return models[size]
+
+    for kind, bat in plans:
+        prev = None
+        for s in sizes:
+            c, extra = _candidate(p, bill, s, kind, bat, model(s))
             cands[(kind, bat, s)] = c
             base = base or extra
+            # Larger sizes only get worse on these tests, so stop one step past the first failure (keeps it fast)
+            if req.budget_rs is not None and c["cost"]["mid"] > req.budget_rs:
+                break
+            if kind == "on_grid" and c["regime"] == "NET_BILLING_2026" and c["export_share"] > 0.40:
+                break
+            if prev is not None:
+                gain = (c["savings_monthly"]["expected"] - prev["savings_monthly"]["expected"]) * 12
+                if gain <= 0 or (c["cost"]["mid"] - prev["cost"]["mid"]) / gain > MARGINAL_PAYBACK_YEARS:
+                    break
+            prev = c
 
     idx, load, fin0 = base
     load_s = np.asarray(load)

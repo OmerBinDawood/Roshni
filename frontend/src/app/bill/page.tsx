@@ -29,7 +29,7 @@ export default function BillPage() {
   const max = Math.max(...hist, d?.protected_threshold ?? 200, 1);
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold">{t("decodeBill")} <span className="urdu font-normal text-muted">· اپنا بل سمجھیں</span></h1>
+      <h1 className="text-2xl font-bold">{t("decodeBill")} {lang === "ur" && <span className="urdu font-normal text-muted">· اپنا بل سمجھیں</span>}</h1>
       <ErrorBox error={error} />
       {!d && (
         <Card className="space-y-3">

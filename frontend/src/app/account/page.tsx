@@ -20,9 +20,11 @@ export default function Account() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [sizings, setSizings] = useState<{ id: string; created_at: string | null; title: string | null; options: { name: string; dc_kw: number; battery_kwh: number; cost_low: number; cost_high: number }[] }[]>([]);
 
   const load = useCallback(async () => {
     try { setRows((await api.get<{ reports: Row[] }>("/me/reports")).reports); } catch (e) { setError((e as Error).message); }
+    try { setSizings((await api.get<{ sizings: typeof sizings }>("/me/sizings")).sizings); } catch {}
   }, []);
   useEffect(() => { if (session) queueMicrotask(load); }, [session, load]);
 
@@ -43,8 +45,8 @@ export default function Account() {
     if (error) setError(error.message);
   }
   async function deleteAll() {
-    if (!confirm("Delete ALL your saved reports permanently? Their share links will stop working. This cannot be undone.")) return;
-    try { await api.del("/me/reports"); setRows([]); } catch (e) { setError((e as Error).message); }
+    if (!confirm("Delete ALL your saved reports and sizings permanently? Their share links will stop working. This cannot be undone.")) return;
+    try { await api.del("/me/reports"); setRows([]); setSizings([]); } catch (e) { setError((e as Error).message); }
   }
 
   if (!ready) return <p className="text-muted">Loading…</p>;
@@ -84,7 +86,7 @@ export default function Account() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">My reports</h1>
+          <h1 className="text-2xl font-bold">My reports and sizings</h1>
           <p className="text-muted text-sm">Signed in as {session.user.email}</p>
         </div>
         <div className="flex gap-2">
@@ -112,7 +114,19 @@ export default function Account() {
           ))}
         </div>
       )}
-      {rows && rows.length > 0 && (
+      {sizings.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">My saved sizings</h2>
+          {sizings.map((z) => (
+            <Link key={z.id} href={`/size?id=${z.id}`} className="block rounded-2xl border border-line bg-surface p-4 hover:shadow-md transition">
+              <div className="font-semibold">{z.title || "Solar sizing"}</div>
+              <div className="text-sm text-muted">{z.created_at ? new Date(z.created_at).toLocaleDateString("en-PK", { day: "numeric", month: "short", year: "numeric" }) : ""}
+                {z.options.length ? ` · ${z.options.map((o) => `${o.dc_kw} kW${o.battery_kwh ? ` + ${o.battery_kwh} kWh` : ""}: ${rs(o.cost_low)}–${rs(o.cost_high)}`).join(" | ")}` : ""}</div>
+            </Link>
+          ))}
+        </div>
+      )}
+      {((rows && rows.length > 0) || sizings.length > 0) && (
         <p className="text-sm"><button className="text-bad underline" onClick={deleteAll}>Delete all my reports</button></p>
       )}
     </div>

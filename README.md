@@ -19,6 +19,8 @@ copy-paste list of questions for your installer.
 | Quote audit rule catalogue R01–R25 (string voltage, MPPT limits, battery compatibility, backup, protection, warranty, savings claim vs regime, price…) | `backend/app/engine/rules.py` |
 | Financial model: regime selection, fixed charges, buyback, scenarios, "rules change again" stress test, 25-yr cash flow | `backend/app/engine/finance.py` |
 | Report with share link, Save-as-PDF (print), Urdu translation | `/report/[id]` |
+| Quote vs Roshni's own sizing for the household (rule R27: size and price cross-check) | report |
+| Saved, shareable sizing results (link, PDF, account history, delete) | `/size`, `/account` |
 | Quote validator (qty × price, line totals vs grand total, missing model numbers) | confirm step, report |
 | Parts-list safety check for self-assemblers (Journey 3, no savings maths) | `/audit?mode=parts` |
 | Datasheet catalogue: fuzzy model matching, web lookups saved as *unverified*, admin review queue | `/admin` |
@@ -31,11 +33,13 @@ copy-paste list of questions for your installer.
 | Loan instalment vs savings (financing check) | `/financing` |
 | Guides: net-billing paperwork, genuine panels, safety basics | `/guides` |
 | Brand guide: 37 panel, inverter and battery brands (who makes them, technology, official verification links, what to check); neutral, no rankings; brand notes on every report; known to the assistant | `/brands` |
-| "Should I add a battery?" advisor | `/battery` |
+| **Size my solar**: appliances + bill + budget + roof to on-grid / hybrid options with cost ranges, savings, payback and backup hours; brand facts and dated public price listings (re-verify warning); estimate builder for chosen brands; no scores or rankings | `/size` |
+| "Should I add a battery?" advisor (pre-filled from a report or a decoded bill) | `/battery` |
 | Solar readiness check ("not now" is a valid answer) | `/readiness` |
 | On-grid vs hybrid explainer, "which type fits me" quiz, backup simulator, 10 lessons with audio, glossary | `/learn` |
 | Independence policy, evidence standards, public rule list, privacy | `/about` |
-| **Roshni Madadgar** assistant — Urdu/Roman Urdu/English, voice input, read-aloud, photo/PDF attachments | every page |
+| **Roshni Madadgar** assistant — Urdu/Roman Urdu/English, voice input, read-aloud, photo/PDF attachments; runs the battery, loan, readiness, compare and sizing calculators through Gemini function calling | every page |
+| Saved household profile (device, and account when signed in); decoded bill reused in the audit and battery advisor; inverter-app screenshot reading for the health check; admin insights on what users decide after each finding | audit, battery, size, health, `/admin` |
 
 No WhatsApp integration (by design, PRD §20). Users paste copied chat text instead.
 
@@ -59,7 +63,7 @@ frontend/  Next.js 16 + Tailwind (mobile-first, RTL Urdu)  --/api/* rewrite-->  
                                                                                  └─ app/db.py          (Supabase Postgres via DATABASE_URL, else local SQLite)
 ```
 
-Tables: `reports`, `datasheets` (catalogue + review queue), `decision_outcomes`. On Postgres, Row-Level Security is
+Tables: `reports`, `sizings`, `datasheets` (catalogue + review queue), `decision_outcomes`, `user_profiles`. On Postgres, Row-Level Security is
 enabled with no policies, so Supabase's public REST API cannot read them; only the backend (postgres role) can.
 Sign-in uses Supabase Auth (email one-time code or magic link). The backend verifies the session JWT against the
 project's public signing keys (`SUPABASE_JWKS_URL`). In the Supabase dashboard, add your site URL
@@ -72,6 +76,16 @@ Magic Link email template if you want users to type a 6-digit code.
 bills are priced single-slab (every unit at the slab rate); protected bills get the one-previous-slab benefit.
 Taxes and adjustments (GST, ED, FPA/QTA) are calibrated from the user's own bill. Buyback and market prices
 carry dated sources.
+
+## Documentation
+
+| Doc | What it covers |
+|---|---|
+| [docs/RUN_GUIDE.md](docs/RUN_GUIDE.md) | Install, configure, run backend and frontend, tests, **admin token and admin endpoints**, deploy, troubleshooting |
+| [docs/USER_GUIDE.md](docs/USER_GUIDE.md) | How to guide people through every journey; FAQ; 10-minute demo script |
+| [docs/PLATFORM.md](docs/PLATFORM.md) | Pages, endpoints, file map, how features link, gap review, sizing rules |
+| [docs/HOW_WE_BUILT_IT.md](docs/HOW_WE_BUILT_IT.md) | How it was built, every business rule, testing, timeline |
+| [docs/PRESENTATION.md](docs/PRESENTATION.md) | Talk outline, libraries and resources used, Q&A |
 
 ## Run locally
 
@@ -93,7 +107,7 @@ npm run dev                                       # http://localhost:3000
 
 Set `BACKEND_URL` for the frontend if the API is not on `http://127.0.0.1:8000`.
 
-Tests: `cd backend && .venv/Scripts/python -m pytest -q` (41 tests; always on a throwaway SQLite database). They cover the
+Tests: `cd backend && .venv/Scripts/python -m pytest -q` (59 tests; always on a throwaway SQLite database). They cover the
 official slab tariff maths, every audit rule path, engine edge cases (long outages, expired agreements, odd bills, cold cities,
 orientation), API input limits, auth/ownership, the bill-portal client (mocked) and the extra journeys.
 

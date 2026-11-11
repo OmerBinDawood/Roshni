@@ -338,11 +338,52 @@ def battery(r: BatteryReq):
 
 
 @app.post("/api/size")
-def size_my_solar(r: SizeReq):
+def size_my_solar(r: SizeReq, user: Optional[dict] = Depends(optional_user)):
+    """Size a system and save the result (share link; owned by the account or the creator's private token)."""
     try:
-        return size_solar(r)
+        result = size_solar(r)
     except ValueError as e:
         raise HTTPException(400, str(e))
+    avg = result["summary"]["avg_monthly_units"]
+    sid, token = db.save_sizing(r.model_dump(mode="json"), result, user_id=user["sub"] if user else None,
+                                title=f"{r.profile.city} · {avg} units/month · " + {"bill": "bill", "backup": "backup", "both": "bill + backup"}[r.goal])
+    return {**result, "id": sid, "owner_token": token, "saved_to_account": bool(user)}
+
+
+def _require_manage_sizing(sid: str, user: Optional[dict], token: Optional[str]):
+    ok = db.can_manage_sizing(sid, user["sub"] if user else None, token)
+    if ok is None:
+        raise HTTPException(404, "Saved sizing not found (it may have been deleted).")
+    if not ok:
+        raise HTTPException(403, "Only the person who created this sizing can do that.")
+
+
+@app.get("/api/sizing/{sid}")
+def get_sizing(sid: str, user: Optional[dict] = Depends(optional_user), x_owner_token: Optional[str] = Header(default=None)):
+    row = db.get_sizing(sid)
+    if not row:
+        raise HTTPException(404, "Saved sizing not found (it may have been deleted).")
+    can = db.can_manage_sizing(sid, user["sub"] if user else None, x_owner_token)
+    return {"id": sid, "request": row[0], "result": row[1], "can_manage": bool(can)}
+
+
+@app.delete("/api/sizing/{sid}")
+def delete_sizing(sid: str, user: Optional[dict] = Depends(optional_user), x_owner_token: Optional[str] = Header(default=None)):
+    _require_manage_sizing(sid, user, x_owner_token)
+    db.delete_sizing(sid)
+    return {"deleted": sid}
+
+
+@app.post("/api/sizing/{sid}/claim")
+def claim_sizing(sid: str, user: dict = Depends(required_user), x_owner_token: Optional[str] = Header(default=None)):
+    _require_manage_sizing(sid, user, x_owner_token)
+    db.claim_sizing(sid, user["sub"])
+    return {"claimed": sid}
+
+
+@app.get("/api/me/sizings")
+def my_sizings(user: dict = Depends(required_user)):
+    return {"sizings": db.list_user_sizings(user["sub"])}
 
 
 @app.post("/api/size/estimate")
@@ -511,7 +552,9 @@ from .engine import brands as brand_guide  # noqa: E402
 def list_brands():
     g = brand_guide.guide()
     return {"as_of": g["as_of"], "policy": g["policy"], "category_labels": brand_guide.CATEGORY_LABELS,
-            "category_checks": g["category_checks"], "brands": g["brands"]}
+            "category_checks": g["category_checks"],
+            "brands": [{**b, "prices": brand_guide.prices_for(b["id"])} for b in g["brands"]],
+            "price_disclaimer": brand_guide.price_data()["disclaimer"], "price_as_of": brand_guide.price_data()["as_of"]}
 
 
 @app.get("/api/brands/{bid}")

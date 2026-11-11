@@ -89,7 +89,7 @@ export default function Assistant() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-line">
             <div>
               <div className="font-semibold">Roshni Madadgar</div>
-              <div className="text-xs text-muted">{reportId ? "Knows your report" : "English · اردو · Roman Urdu"}</div>
+              <div className="text-xs text-muted">{reportId ? "Knows your report" : lang === "ur" ? "English · اردو · Roman Urdu" : "English, Urdu and Roman Urdu"}</div>
             </div>
             <button onClick={() => setOpen(false)} aria-label="Close" className="text-xl px-2">×</button>
           </div>

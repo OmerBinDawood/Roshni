@@ -183,3 +183,61 @@ def test_estimate_uses_brand_listings_and_falls_back_to_market_ranges():
     assert c.post("/api/size/estimate", json={**body, "dc_kw": -1}).status_code == 422
     over = c.post("/api/size/estimate", json={**body, "budget_rs": 100000}).json()
     assert over["budget_verdict"] == "over"
+
+
+def test_brands_endpoint_carries_prices_and_warning():
+    out = c.get("/api/brands").json()
+    assert out["price_disclaimer"] and out["price_as_of"]
+    by_id = {b["id"]: b for b in out["brands"]}
+    assert by_id["aiko"]["prices"] and by_id["deye"]["prices"] == []
+
+
+# ---------- R27: quote vs sizing ----------
+from app.engine.audit import run_audit  # noqa: E402
+
+
+def _quote(panels: int, total: float):
+    req = sample_request()
+    req.system.panel_count = panels
+    req.quote.line_items[0].quantity = panels
+    req.quote.grand_total = total
+    return req
+
+
+def test_r27_flags_oversized_quote_and_prices_against_sizing():
+    big = run_audit(_quote(24, 4_000_000))
+    r27 = [f for f in big["findings"] if f["rule_id"] == "R27"]
+    assert any(f["severity"] == "CLARIFY" and "bigger than Roshni's sizing" in f["title"] for f in r27)
+    assert any("above Roshni's cost range" in f["title"] for f in r27) and all(f["question"] or f["severity"] == "OK" for f in r27)
+    low = run_audit(_quote(10, 150_000))
+    assert any(f["rule_id"] == "R27" and "well below" in f["title"] for f in low["findings"])
+
+
+def test_r27_ok_when_in_line_and_absent_without_a_household_or_in_parts_mode():
+    ok = run_audit(_quote(10, 900_000))
+    assert not any(f["rule_id"] == "R27" and f["severity"] == "CLARIFY" and "bigger" in f["title"] for f in ok["findings"])
+    parts = sample_request()
+    parts.mode = "parts"
+    assert not any(f["rule_id"] == "R27" for f in run_audit(parts)["findings"])
+
+
+# ---------- saved sizing ----------
+def test_sizing_is_saved_shared_owned_and_deleted():
+    t = token(sub="sizing-user")
+    anon = c.post("/api/size", json=SIZE_BODY).json()
+    assert anon["id"] and anon["owner_token"] and anon["saved_to_account"] is False
+    got = c.get(f"/api/sizing/{anon['id']}").json()                       # anyone with the link can view
+    assert got["result"]["options"] and got["request"]["budget_rs"] == 1500000 and got["can_manage"] is False
+    assert c.get(f"/api/sizing/{anon['id']}", headers={"x-owner-token": anon["owner_token"]}).json()["can_manage"] is True
+    assert c.delete(f"/api/sizing/{anon['id']}").status_code == 403       # stranger cannot delete
+    assert c.post(f"/api/sizing/{anon['id']}/claim", headers=H(t)).status_code == 403
+    assert c.post(f"/api/sizing/{anon['id']}/claim", headers={**H(t), "x-owner-token": anon["owner_token"]}).status_code == 200
+    mine = c.get("/api/me/sizings", headers=H(t)).json()["sizings"]
+    assert [s["id"] for s in mine] == [anon["id"]] and mine[0]["options"][0]["cost_low"] > 0
+    signed = c.post("/api/size", json=SIZE_BODY, headers=H(t)).json()
+    assert signed["saved_to_account"] is True
+    assert c.delete(f"/api/sizing/{signed['id']}", headers=H(t)).status_code == 200
+    assert c.get(f"/api/sizing/{signed['id']}").status_code == 404
+    assert c.delete("/api/me/reports", headers=H(t)).status_code == 200  # delete-all removes saved sizings too
+    assert c.get("/api/me/sizings", headers=H(t)).json()["sizings"] == []
+    assert c.get("/api/me/sizings").status_code == 401

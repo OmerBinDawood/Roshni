@@ -8,12 +8,12 @@ Roshni is an independent second opinion on a solar or battery quote for Pakistan
 
 ## 1. What exists
 
-**16 page routes** (14 feature pages plus the home page and the report page), **36 API endpoints**, **26 audit rules**, **35 cities**, **37 brand profiles**, **55 backend tests**.
+**16 page routes** (14 feature pages plus the home page and the report page), **40 API endpoints**, **27 audit rules**, **35 cities**, **37 brand profiles**, **59 backend tests**.
 
 | Route | Purpose | Backend endpoints used |
 |---|---|---|
 | `/` | Home: entry cards for every journey | `/meta` |
-| `/size` | **Size my solar**: appliances + bill + budget + roof to 2 or 3 system options with cost ranges, savings, payback and backup hours, then brand facts, dated public price listings and checks for each part (no scores), and an estimate builder using the brands the user picks | `/size`, `/size/estimate` |
+| `/size` | **Size my solar** (result saved automatically; `?id=` opens a saved one; share link, PDF, save to account, delete): appliances + bill + budget + roof to 2 or 3 system options with cost ranges, savings, payback and backup hours, then brand facts, dated public price listings and checks for each part (no scores), and an estimate builder using the brands the user picks | `/size`, `/size/estimate` |
 | `/audit` | 4-step wizard: quote, bill, home, confirm. `?mode=parts` skips the bill and savings | `/extract/quote`, `/extract/bill`, `/bill/lookup`, `/profile/parse`, `/specs/lookup`, `/validate/quote`, `/audit` |
 | `/report/[id]` | The audit report: verdict, findings, savings, backup, brands, installer kit, share, PDF, Urdu | `/report/{id}`, `/report/{id}/access`, `/report/{id}/urdu`, `/report/{id}/claim`, `/report/{id}/outcome` |
 | `/bill` | Bill Decoder: every bill line explained in English and Urdu; lookup by reference number | `/extract/bill`, `/bill/lookup`, `/bill/companies` |
@@ -24,8 +24,8 @@ Roshni is an independent second opinion on a solar or battery quote for Pakistan
 | `/financing` | Loan instalment against monthly saving | `/financing` |
 | `/learn` | 10 lessons, 21-term glossary, system-type quiz, backup simulator (read aloud, English and Urdu) | none (static) |
 | `/guides` | Net-billing paperwork, genuine panels, safety | none (static) |
-| `/brands` | Neutral, alphabetical guide to 37 brands | `/brands`, `/brands/{id}` |
-| `/account` | Sign in (email code or link), saved reports, delete all | `/me/reports` |
+| `/brands` | Neutral, alphabetical guide to 37 brands, with dated public price listings and a re-verify warning | `/brands`, `/brands/{id}` |
+| `/account` | Sign in (email code or link), saved reports and sizings, delete all | `/me/reports`, `/me/sizings` |
 | `/about` | Independence policy, privacy, public rule list (`#rules`, `#privacy`) | none |
 | `/admin` | Datasheet review queue, north-star metric, and what users decide after each finding (needs `ADMIN_TOKEN`) | `/admin/datasheets`, `/admin/datasheets/{id}/verify`, `/admin/stats`, `/admin/insights` |
 
@@ -33,7 +33,7 @@ Also on every page: the **Roshni Madadgar assistant** (English, Urdu, Roman Urdu
 
 ### Complete API list
 
-`GET /api/health`, `GET /api/meta`, `POST /api/extract/quote`, `POST /api/validate/quote`, `POST /api/extract/bill`, `GET /api/bill/companies`, `POST /api/bill/lookup`, `POST /api/specs/lookup`, `POST /api/profile/parse`, `POST /api/audit`, `GET|DELETE /api/report/{id}`, `GET /api/report/{id}/access`, `POST /api/report/{id}/claim`, `POST /api/report/{id}/urdu`, `POST /api/report/{id}/outcome`, `GET|DELETE /api/me/reports`, `GET|PUT /api/me/profile`, `POST /api/size`, `POST /api/size/estimate`, `POST /api/extract/readings`, `GET /api/admin/insights`, `POST /api/battery`, `POST /api/readiness`, `POST /api/chat`, `POST /api/chat/upload`, `GET /api/admin/datasheets`, `POST /api/admin/datasheets/{id}/verify`, `GET /api/admin/stats`, `POST /api/compare`, `POST /api/health-check`, `POST /api/financing`, `GET /api/brands`, `GET /api/brands/{id}`.
+`GET /api/health`, `GET /api/meta`, `POST /api/extract/quote`, `POST /api/validate/quote`, `POST /api/extract/bill`, `GET /api/bill/companies`, `POST /api/bill/lookup`, `POST /api/specs/lookup`, `POST /api/profile/parse`, `POST /api/audit`, `GET|DELETE /api/report/{id}`, `GET /api/report/{id}/access`, `POST /api/report/{id}/claim`, `POST /api/report/{id}/urdu`, `POST /api/report/{id}/outcome`, `GET|DELETE /api/me/reports`, `GET|PUT /api/me/profile`, `POST /api/size` (saves the result), `GET|DELETE /api/sizing/{id}`, `POST /api/sizing/{id}/claim`, `GET /api/me/sizings`, `POST /api/size/estimate`, `POST /api/extract/readings`, `GET /api/admin/insights`, `POST /api/battery`, `POST /api/readiness`, `POST /api/chat`, `POST /api/chat/upload`, `GET /api/admin/datasheets`, `POST /api/admin/datasheets/{id}/verify`, `GET /api/admin/stats`, `POST /api/compare`, `POST /api/health-check`, `POST /api/financing`, `GET /api/brands`, `GET /api/brands/{id}`.
 
 ---
 
@@ -49,7 +49,7 @@ Datasheets: catalogue (fuzzy match) ► else Gemini + Google Search ► "unverif
                                                     │
                           Validator (arithmetic, missing models)
                                                     │
-        Engine: weather ► PV ► load ► dispatch ► bills ► 26 rules ► cash flow
+        Engine: weather ► PV ► load ► dispatch ► bills ► 27 rules ► cash flow
                                                     │
                      Report saved (Supabase) ► share link, PDF, Urdu, compare, loan
 ```
@@ -65,7 +65,7 @@ Before any document reaches Gemini the user must tick the consent box; the API r
 | Routes, limits, consent, ownership | `backend/app/main.py` |
 | Every Gemini call and prompt | `backend/app/gemini.py` |
 | Orchestration, backup list, battery options, reconciliation | `backend/app/engine/audit.py` |
-| 26 audit rules | `backend/app/engine/rules.py` |
+| 27 audit rules | `backend/app/engine/rules.py` |
 | Tariff, regimes, bills, 25-year cash flow | `backend/app/engine/finance.py` |
 | PV simulation (pvlib) | `backend/app/engine/pv.py` |
 | Household load profile, bill scaling | `backend/app/engine/load.py` |
@@ -73,6 +73,7 @@ Before any document reaches Gemini the user must tick the consent box; the API r
 | Quote arithmetic checks | `backend/app/engine/validate.py` |
 | Readiness check | `backend/app/engine/readiness.py` |
 | Size my solar (options, costs, brand lists, brand estimate) | `backend/app/engine/sizing.py` |
+| Quote vs sizing cross-check (R27) | `engine/audit.py` `sizing_context`, `engine/rules.py` |
 | Per-brand price listings with source, date and confidence | `backend/app/data/brand_prices.json` |
 | Compare, health check, financing | `backend/app/engine/extras.py` |
 | Brand matching and notes | `backend/app/engine/brands.py` |
@@ -113,11 +114,14 @@ The full catalogue with thresholds and reasons is section 5.7 of [HOW_WE_BUILT_I
 | Report | Financing | `/financing?report=id` pre-fills price and savings |
 | Report | Account | Save to account, history, delete all |
 | Report | Rule list | Each finding links to `/about#rules` |
+| Household profile and bill | Audit R27 | The audit runs Roshni's own sizing for the same household and compares the quote's size and price with it |
+| Size | Account | Saved sizings are listed under My reports and sizings |
 | Report | Outcome survey | Feeds the `/admin` north-star metric |
 | Readiness | Audit | "Next: get quotes, then check them" |
 | Health check | Battery advisor | Link at the bottom |
 | Learn | Audit | Link from the backup simulator |
-| Brand guide | Assistant | The same data is in the assistant's knowledge base |
+| Brand guide | Assistant | The same data, including price listings, is in the assistant's knowledge base |
+| Brand guide | Size my solar | `/brands` links to `/size`; `/size` links brand names back to `/brands#id` |
 
 **Gaps found in the first review, now closed**
 
@@ -162,7 +166,7 @@ The full catalogue with thresholds and reasons is section 5.7 of [HOW_WE_BUILT_I
 
 | Check | Result |
 |---|---|
-| Backend tests | 55 / 55 pass |
+| Backend tests | 59 / 59 pass |
 | TypeScript and ESLint | Clean |
 | All 15 routes respond | Yes (HTTP 200) |
 | Live end-to-end with real Gemini and Supabase, signed in with a test account | 19 / 19 pass: audit, history, ownership, claim, Urdu, compare, assistant with report context, battery, readiness, health, financing, brands, quote extraction, consent refusal, admin protection, delete all |
@@ -185,3 +189,38 @@ Still unverified: a bill lookup with a real reference number, a real sign-in ema
 - **Per-brand prices (added later the same day):** `brand_prices.json` holds, per brand, the product, a price (Rs per watt for panels; Rs per listed unit with its kW or kWh for inverters and batteries), the listing date when known, a confidence label (dated listing, undated listing, price guide, price tracker, retailer brand page) and the source URL. Where sources disagree the entry says so (for example Risen and Inverex). `/size/estimate` uses a picked brand's listing for panels (per watt), hybrid inverters (the listed model's price, scaled up only when the system needs a larger inverter) and lithium batteries (per kWh), and market ranges for everything else, including installation and any brand with no listing. Total is compared with the budget: within, maybe (low end fits) or over.
 - **What is covered:** panels for 10 brands; hybrid inverters for 12 brands (Huawei and Ziewnic are display-only because no model size was stated); lithium batteries for 6 brands. No usable public listing was found for Deye, Felicity, Crown inverters, Sunwoda, Hithium, Sacred Sun, Leoch, Soluna, and the lead-acid brands, and the page says so rather than guessing.
 - **Refreshing:** prices are dealer listings from 11 November 2026 and age quickly; refresh `brand_prices.json` and its `as_of` at least monthly, and prefer dated retailer pages over guides.
+
+## 9. Gap review (11 November 2026, after the sizing and price work)
+
+**What the platform has:** 16 page routes, 36 API endpoints, 26 audit rules, 35 cities, 37 brand profiles (about 30 with price listings), 56 backend tests; the quote audit, parts check, bill decoder and bill lookup, size my solar, battery advisor, readiness, compare, health check (typed or screenshot), loan check, learn, guides, brands, account, admin, and the assistant that runs the calculators.
+
+**How it links:** bill to audit, battery and size; report to battery, financing, compare, assistant, account, brand guide and rule list; size to audit and financing; readiness to size and audit; health to battery; brands to size; the household profile is shared by audit, battery and size.
+
+**Gaps, in order of importance**
+
+| # | Gap | Why it matters | Suggested fix |
+|---|---|---|---|
+| 1 | **No limit on AI endpoints.** Only bill lookup is rate limited; chat, quote, bill and screenshot reading and profile parsing can be called without limit | Cost abuse of the Gemini key once the site is public | Per-IP and per-account limits, daily spend alert |
+| 2 | **Not deployed.** Runs locally only; Supabase redirect URLs and the magic-link email are unverified; no error monitoring | Nobody outside the team can use it | Deploy API and web app, set Supabase URLs, add Sentry |
+| 3 | ~~A quote is not checked against the sizing.~~ **Closed:** rule R27 compares the quote's size and price with Roshni's own sizing | | |
+| 4 | **Prices go stale.** `brand_prices.json` is a manual snapshot with gaps (Deye, Felicity, Sunwoda, Hithium, lead-acid and others); nothing warns when a listing is old | Wrong prices undermine trust | Monthly refresh routine; show a "listing older than 30 days" flag; an admin screen to update prices |
+| 5 | ~~Sizing results cannot be saved or shared.~~ **Closed:** results are saved automatically with share link, PDF, account history and delete | | |
+| 6 | **Sizing simplifications.** Single-phase only, lithium only, hybrid inverter prices only, fixed 2 to 12 kW steps, ignores shade and orientation | Edge cases give weaker advice | Add phase, lead-acid, on-grid inverter prices, orientation and shade inputs |
+| 7 | **Urdu is partial.** `/size`, `/battery`, `/health`, `/financing`, `/readiness` and most form labels are English only | Many target users read Urdu | Translate labels and results; reuse the translation cache pattern |
+| 8 | **Real-data validation is missing.** No bill lookup with a real reference number, no inverter-log comparison, no engineer review of findings | Accuracy claims are unproven | The PRD's concierge pilot with 30 to 50 real quotes and a PEC-registered engineer |
+| 9 | **Readiness and the health check do not hand data on.** They do not fill the household profile or the audit | Users re-enter facts | Save readiness answers (roof, shade, budget) into the profile |
+| 10 | **No front-end automated tests.** Only backend tests and manual browser checks | Regressions in pages go unnoticed | A small Playwright suite for the main journeys |
+| 11 | **Load-shedding is one fixed pattern for every city**, and only the first AC type counts toward backup load | Backup estimates can be off | City or feeder specific schedules; count every AC type |
+| 12 | **Datasheet catalogue grows only through manual admin review** and there is no reminder | Slow to fill | A review queue badge or email |
+
+**Not built on purpose:** WhatsApp, phone sign-in, government scheme guide, installer directory, brand scores, forum ratings, load-shifting coach and the other PRD P2 and P3 items (reasons in HOW_WE_BUILT_IT.md section 13).
+
+**Are we using the tools fully?** Mostly. Gemini now reads documents, finds datasheets, translates, chats and calls the calculators. Not yet used: Gemini reading a signed installer contract or warranty card, Gemini explaining a bill month by month against a report, and pvlib per-roof shading. Supabase is used for Postgres, row-level security, sign-in and saved profiles; email notifications and storage are unused.
+
+## 10. Admin access
+
+There are no admin usernames. Admin is one shared secret, `ADMIN_TOKEN` in `backend/.env` (not in the repository), sent in the `x-admin-token` header. Page: `/admin`. Endpoints: `GET /api/admin/datasheets`, `POST /api/admin/datasheets/{id}/verify`, `GET /api/admin/stats`, `GET /api/admin/insights`. Full detail and examples are in [RUN_GUIDE.md](RUN_GUIDE.md) section 6.
+
+## 11. Language
+
+English mode is fully English (no Urdu text appears unless the user switches language; the switch itself reads "Urdu"). Urdu mode is partial: reports, lessons, bill explanations, verdicts and the assistant are bilingual, while many form labels and the newest pages stay English.

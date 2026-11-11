@@ -11,7 +11,7 @@ export default function Header() {
       <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg">
           <span aria-hidden className="inline-block w-6 h-6 rounded-full bg-sun shadow-[0_0_14px_var(--sun)]" />
-          Roshni <span className="urdu font-normal text-muted text-base">روشنی</span>
+          Roshni{lang === "ur" && <span className="urdu font-normal text-muted text-base"> روشنی</span>}
         </Link>
         <nav className="flex items-center gap-1 text-sm">
           <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/size">Size</Link>
@@ -26,7 +26,7 @@ export default function Header() {
             className="ms-2 px-3 py-1 rounded-full border border-line hover:bg-bg"
             aria-label="Switch language"
           >
-            {lang === "en" ? <span className="urdu">اردو</span> : "English"}
+            {lang === "en" ? "Urdu" : "English"}
           </button>
         </nav>
       </div>

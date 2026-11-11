@@ -24,6 +24,8 @@ const RULES: [string, string, string][] = [
   ["R23", "Payment terms (advance, milestones)", "Advice"],
   ["R24", "Installer certification (AEDB) where net billing applies", "Advice"],
   ["R25", "On-grid quote when you asked for backup", "Critical"],
+  ["R26", "Roof direction and tilt: how much output is lost versus south-facing", "Advice / Ask"],
+  ["R27", "Quote size and price compared with Roshni's own sizing for your home", "Ask installer / Advice"],
 ];
 
 export default function About() {

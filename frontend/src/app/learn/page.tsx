@@ -63,7 +63,7 @@ export default function LearnPage() {
       </Card>
 
       <Card>
-        <h2 className="font-semibold text-lg">Backup simulator · <span className="urdu font-normal">کیا چلے گا، کتنی دیر؟</span></h2>
+        <h2 className="font-semibold text-lg">Backup simulator{lang === "ur" && <> · <span className="urdu font-normal">کیا چلے گا، کتنی دیر؟</span></>}</h2>
         <div className="mt-3 grid sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             {APPLIANCES.map((a) => (
@@ -95,7 +95,7 @@ export default function LearnPage() {
       <Quiz />
 
       <Card>
-        <h2 className="font-semibold text-lg">Solar Seekhein · <span className="urdu font-normal">سولر سیکھیں</span></h2>
+        <h2 className="font-semibold text-lg">{lang === "ur" ? <>Solar Seekhein · <span className="urdu font-normal">سولر سیکھیں</span></> : "Learn about solar"}</h2>
         <p className="text-sm text-muted">10 two-minute lessons. Tap 🔊 to listen.</p>
         <div className="mt-3 grid sm:grid-cols-2 gap-3">
           {LESSONS.map((l, i) => {

@@ -86,6 +86,26 @@ def financials(profile: Profile, bill: Bill | None, idx, pv, load, outage, *, in
     }
 
 
+def sizing_context(req: AuditRequest, dc_kw: float, inv_type: str, usable: float) -> dict | None:
+    """What Roshni's own sizing suggests for this household, for the quote-vs-sizing rule (R27). Never breaks an audit."""
+    if req.mode != "full" or dc_kw <= 0:
+        return None
+    try:
+        from .sizing import SizeReq, cost_range, size_solar  # local import: sizing builds on this module
+
+        only = ("on_grid", 0) if inv_type == "on_grid" else ("hybrid", 5 if usable < 7.5 else 10)
+        r = size_solar(SizeReq(profile=req.profile, bill=req.bill, goal="bill" if inv_type == "on_grid" else "both"), only=only)
+        if not r["options"]:
+            return None
+        rec = r["options"][0]
+        inv_kw = req.system.inverter.rated_kw or max(3.0, round(dc_kw / 1.2 * 2) / 2)
+        return {"name": rec["name"], "dc_kw": rec["dc_kw"], "battery_kwh": rec["battery_kwh"], "cost": rec["cost"],
+                "savings_expected": rec["savings_monthly"]["expected"], "payback_years": rec["payback_years"],
+                "quote_cost": cost_range("on_grid" if inv_type == "on_grid" else "hybrid", dc_kw, inv_kw, usable)}
+    except Exception:  # sizing is a cross-check; the audit must still work without it
+        return None
+
+
 def run_audit(req: AuditRequest) -> dict:
     s, p = req.system, req.profile
     dc_kw = s.panel_count * (s.panel.pmax_w or 0) / 1000
@@ -106,6 +126,7 @@ def run_audit(req: AuditRequest) -> dict:
         best = simulate_pv(p.city, dc_kw, s.inverter.rated_kw, 20, 180)["pv_kw"].sum()
         orientation_loss = max(0.0, 1 - float(np.sum(pv)) / best) if best else 0.0
     ctx = {"site": site, "mode": req.mode, "orientation_loss": orientation_loss,
+           "sizing": sizing_context(req, dc_kw, inv_type, usable),
            "tilt": s.tilt, "azimuth": s.azimuth,
            "regime": fin["regime"] if fin else None,
            "savings_monthly": fin["savings_monthly"] if fin else None,

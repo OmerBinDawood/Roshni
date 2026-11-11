@@ -136,6 +136,36 @@ def run_rules(req: AuditRequest, ctx: dict) -> list[Finding]:
                       "fewer units a year than south-facing panels at about 20 degrees. A raised structure can often fix this.",
                       question="Can the structure face the panels south at about 20 degrees?"))
 
+    # R27 quote vs Roshni's own sizing for this household (Roshni addition)
+    sz = ctx.get("sizing")
+    if sz and dc_kw:
+        rec = sz["dc_kw"]
+        if dc_kw > rec * 1.3 and dc_kw - rec >= 1.0:
+            out.append(_f("R27", "CLARIFY", f"Quote is bigger than Roshni's sizing for your home ({dc_kw:.1f} kW vs about {rec:g} kW)",
+                          f"For your use, tariff and rules, extra panels beyond about {rec:g} kW stop paying for themselves within 6 years "
+                          "or export much of their output at the low buyback rate.",
+                          f"Quote {dc_kw:.1f} kW; Roshni sizing {rec:g} kW ({sz['name']})",
+                          f"Why {dc_kw:.1f} kW instead of about {rec:g} kW, and how much extra will the additional panels save each month?"))
+        elif dc_kw < rec * 0.6 and rec - dc_kw >= 1.0:
+            out.append(_f("R27", "INFO", f"Quote is smaller than Roshni's sizing ({dc_kw:.1f} kW vs about {rec:g} kW)",
+                          f"A system of about {rec:g} kW would cut your bill further; a smaller one costs less but saves less.",
+                          f"Quote {dc_kw:.1f} kW; Roshni sizing {rec:g} kW", "Is the roof or budget limiting the size? Could the system be expanded later?"))
+        else:
+            out.append(_f("R27", "OK", "System size is in line with Roshni's sizing for your home",
+                          f"{dc_kw:.1f} kW vs about {rec:g} kW suggested."))
+        total, qc = q.grand_total, sz.get("quote_cost")
+        if total and qc:
+            if total > qc["high"] * 1.15:
+                out.append(_f("R27", "CLARIFY", "Total is above Roshni's cost range for a system of this size",
+                              f"Rs {total:,.0f} vs an indicative Rs {qc['low']:,.0f} to {qc['high']:,.0f} for {dc_kw:.1f} kW "
+                              "(panels, inverter, battery, structure and installation; approval fees extra).",
+                              f"Quote Rs {total:,.0f}", "What explains the difference from typical component prices? Please itemise."))
+            elif total < qc["low"] * 0.7:
+                out.append(_f("R27", "INFO", "Total is well below the usual cost range: check what is missing",
+                              f"Rs {total:,.0f} vs an indicative Rs {qc['low']:,.0f} to {qc['high']:,.0f}. Very low quotes often leave out "
+                              "protection, earthing, structure quality or genuine A-grade panels.",
+                              f"Quote Rs {total:,.0f}", "Which items and grades are included at this price?"))
+
     # R25 on-grid quote but user wants backup
     if inv.type == "on_grid" and p.wants_backup:
         out.append(_f("R25", "CRITICAL", "This system will not work during load-shedding",
