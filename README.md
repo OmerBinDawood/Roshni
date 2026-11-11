@@ -30,7 +30,7 @@ copy-paste list of questions for your installer.
 | Existing-system health check: actual vs expected monthly generation, likely causes, inverter settings checklist | `/health` |
 | Loan instalment vs savings (financing check) | `/financing` |
 | Guides: net-billing paperwork, genuine panels, safety basics | `/guides` |
-| Brand guide: 38 panel, inverter and battery brands (who makes them, technology, official verification links, what to check); neutral, no rankings; brand notes on every report; known to the assistant | `/brands` |
+| Brand guide: 37 panel, inverter and battery brands (who makes them, technology, official verification links, what to check); neutral, no rankings; brand notes on every report; known to the assistant | `/brands` |
 | "Should I add a battery?" advisor | `/battery` |
 | Solar readiness check ("not now" is a valid answer) | `/readiness` |
 | On-grid vs hybrid explainer, "which type fits me" quiz, backup simulator, 10 lessons with audio, glossary | `/learn` |
