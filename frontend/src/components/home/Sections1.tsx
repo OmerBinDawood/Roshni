@@ -37,7 +37,7 @@ export function Problem() {
     <section className="bg-white pt-8 pb-24">
       <div className="max-w-6xl mx-auto px-5">
         <Reveal className="max-w-3xl">
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-sun-ink">Why Roshni exists</div>
+          <div className="eyebrow">02 / Why Roshni exists</div>
           <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold leading-tight">The rules changed in February 2026. <span className="text-muted">A lot of quotes did not.</span></h2>
           <p className="mt-4 text-lg text-muted">Net billing replaced 1:1 net metering for new users. Many installers still promise savings the old way, and most buyers have no way to tell.</p>
         </Reveal>

@@ -604,7 +604,11 @@ The platform was built in seven phases on 11 November 2026, ending in seven comm
 3. Found and fixed the sign-in clock-skew bug; added a regression test (42 tests).
 4. Mapped how features connect and where they do not; wrote [PLATFORM.md](PLATFORM.md) and the business-rule catalogue in section 5.7.
 
-**Phase 14 (UI redesign, local until pushed)**
+**Phase 15 (second design pass: hero, audit wizard, report, responsiveness, brand page fix)**
+1. Hero rebuilt after the gfx-t.com reference (light theme, particle field, sun, audit receipt, blocky buttons).
+2. Audit wizard and report redesigned; responsive checks at 320 to 1366 px; brand page crash fixed. See PLATFORM.md section 12.
+
+**Phase 14 (UI redesign)**
 1. Read the shared design chat and set the direction: light theme only, glowing sun, scroll-driven story, section-specific interactions, no generic "AI dashboard" look.
 2. New design system (tokens, buttons with shine sweep, cards, sliders, animations with reduced-motion support), Manrope display font, floating header, new footer; inner pages moved into an `(app)` route group so the homepage can be full width.
 3. New homepage with twelve sections (hero with 3D panel and glowing sun, sticky scroll story, net-billing simulator, audit console, feature cards with distinct hovers, sizing preview, trust, team, FAQ, final call to action), including the team: Omer Bin Dawood, Hira Baig and Alwaz Islam from COMSATS University Islamabad.

@@ -44,7 +44,7 @@ export function Badge({ severity }: { severity: string }) {
 
 export function Consent({ checked, onChange }: { checked: boolean; onChange: (b: boolean) => void }) {
   return (
-    <label className="!text-ink !text-sm flex items-start gap-2">
+    <label className={`!text-ink !text-sm flex items-start gap-3 border-[1.5px] p-3 cursor-pointer transition-colors ${checked ? "border-ink bg-leaf/10" : "border-line bg-bg hover:border-ink"}`}>
       <input type="checkbox" className="w-4 h-4 mt-1" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>
         I agree that this document is sent to an AI service (Google Gemini) to read it. Roshni asks the AI not to copy names,

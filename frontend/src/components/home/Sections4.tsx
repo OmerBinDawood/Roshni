@@ -17,7 +17,7 @@ export function Trust() {
     <section className="bg-white py-24">
       <div className="max-w-6xl mx-auto px-5">
         <Reveal className="max-w-3xl">
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-sun-ink">Why you can trust it</div>
+          <div className="eyebrow">08 / Why you can trust it</div>
           <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold leading-tight">Built to tell you the truth, even when that means <span className="text-gradient-sun">don&apos;t buy this</span></h2>
         </Reveal>
         <div className="mt-12 grid md:grid-cols-6 gap-5">
@@ -68,7 +68,7 @@ export function Team() {
       <div className="absolute -bottom-40 left-1/2 -translate-x-1/2 w-[900px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(255,176,32,0.3),transparent_65%)]" aria-hidden />
       <div className="relative max-w-5xl mx-auto px-5 text-center">
         <Reveal>
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-sun-ink">The team</div>
+          <div className="eyebrow">09 / The team</div>
           <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold leading-tight">Three engineers from COMSATS University Islamabad</h2>
           <p className="mt-4 text-lg text-muted max-w-2xl mx-auto">We built Roshni because we saw families make a very large purchase on a quote they could not judge. Our goal is simple: an honest second opinion for every Pakistani household.</p>
         </Reveal>
@@ -95,7 +95,7 @@ export function Faq() {
     <section className="bg-white py-24">
       <div className="max-w-3xl mx-auto px-5">
         <Reveal className="text-center">
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-sun-ink">Questions</div>
+          <div className="eyebrow">10 / Questions</div>
           <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold">Things people ask first</h2>
         </Reveal>
         <div className="mt-10 space-y-3">
@@ -126,8 +126,8 @@ export function FinalCta() {
         <h2 className="text-4xl sm:text-6xl font-extrabold leading-[1.05]">Before you pay, <span className="text-ink">let Roshni check it.</span></h2>
         <p className="mt-5 text-lg text-ink/75">It takes about five minutes, costs nothing, and needs no account.</p>
         <div className="mt-8 flex flex-wrap gap-3 justify-center">
-          <Link href="/audit" className="btn btn-dark !px-8 !py-4 text-base">Check my quote <span className="arrow">→</span></Link>
-          <Link href="/size" className="btn btn-ghost !px-7 !py-4 text-base">Size my solar</Link>
+          <Link href="/audit" className="blk blk-primary !bg-ink !text-white"><span>Check my quote</span><span className="blk-ico">↗</span></Link>
+          <Link href="/size" className="blk blk-ghost"><span>Size my solar</span><span className="blk-ico">↗</span></Link>
         </div>
       </div>
     </section>

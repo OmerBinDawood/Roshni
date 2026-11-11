@@ -80,10 +80,10 @@ export default function Brands() {
                 <p>{b.about}</p>
                 <p><b>Technology:</b> {b.technology}</p>
                 <p><b>In Pakistan:</b> {b.pakistan}</p>
-                {b.prices.length > 0 ? (
+                {(b.prices ?? []).length > 0 ? (
                   <div className="rounded-xl bg-sun/10 p-3 text-xs space-y-1">
                     <div className="font-medium text-sm">Public price listings (collected {g.price_as_of})</div>
-                    {b.prices.map((p) => (
+                    {(b.prices ?? []).map((p) => (
                       <div key={p.product}><b>{p.unit === "per_w" ? `Rs ${p.low}${p.high !== p.low ? `–${p.high}` : ""} per watt` : `Rs ${p.low.toLocaleString("en-PK")}${p.high !== p.low ? `–${p.high.toLocaleString("en-PK")}` : ""}`}</b> · {p.product} · {p.as_of ? `listed ${p.as_of}` : "undated"} ({p.confidence}) · <a className="underline" href={p.source} target="_blank" rel="noreferrer">source</a>{p.note ? ` · ${p.note}` : ""}</div>
                     ))}
                     <div className="text-warn">Re-verify the exact model, price, grade and warranty with the seller in writing before you pay.</div>

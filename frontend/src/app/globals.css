@@ -37,7 +37,8 @@
   --color-info: var(--blue);
   --color-teal: var(--teal);
   --font-sans: var(--font-inter);
-  --font-display: var(--font-manrope);
+  --font-display: var(--font-archivo);
+  --font-mono: var(--font-jbmono);
   --font-urdu: var(--font-nastaliq);
 }
 
@@ -48,7 +49,8 @@ body {
   font-family: var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-.font-display, h1, h2 { font-family: var(--font-manrope), var(--font-inter), system-ui, sans-serif; letter-spacing: -0.02em; }
+h1, h2, .font-display { font-family: var(--font-archivo), var(--font-inter), system-ui, sans-serif; letter-spacing: -0.025em; }
+.font-mono { font-family: var(--font-jbmono), ui-monospace, monospace; }
 
 html[lang="ur"] body,
 .urdu {
@@ -80,6 +82,19 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--sun-deep); fle
 input[type="range"] { width: 100%; accent-color: var(--sun-deep); }
 
 @layer components {
+  /* blocky editorial buttons (hero and calls to action) */
+  .blk { display: inline-flex; align-items: stretch; border: 1.5px solid var(--ink); font-family: var(--font-jbmono), monospace; font-weight: 700; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink); transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.2s; cursor: pointer; }
+  .blk > span:first-child { padding: 1rem 1.35rem; display: flex; align-items: center; }
+  .blk-ico { display: grid; place-items: center; width: 3.1rem; background: var(--ink); color: var(--sun); font-size: 1.05rem; transition: transform 0.25s ease; }
+  .blk-primary { background: var(--sun); }
+  .blk-ghost { background: rgba(255, 255, 255, 0.7); }
+  .blk:hover { transform: translate(-3px, -3px); box-shadow: 5px 5px 0 0 var(--ink); }
+  .blk-ghost:hover { background: #fff; }
+  .blk:hover .blk-ico { transform: rotate(45deg); }
+  .blk:active { transform: translate(0, 0); box-shadow: none; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 0.6rem; font-family: var(--font-jbmono), monospace; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink); }
+  .eyebrow::before { content: ""; width: 0.6rem; height: 0.6rem; background: var(--sun); border: 1.5px solid var(--ink); }
+
 /* ---------- buttons ---------- */
 .btn {
   position: relative; overflow: hidden; isolation: isolate;

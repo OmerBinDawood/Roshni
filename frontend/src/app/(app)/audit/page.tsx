@@ -7,6 +7,7 @@ import ProfileForm from "@/components/ProfileForm";
 import { Button, Card, Consent, ErrorBox, Issues, Num } from "@/components/ui";
 import { api, ITEM_TYPES, rs, type Bill, type Issue, type LineItem, type Quote, type Spec, type SystemConfig } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
+import { ActionBar, ChoiceCard, Processing, StepShell, Stepper } from "@/components/wizard";
 import { deviceReports, ownerToken } from "@/lib/supabase";
 import { savedBill, usePersistedProfile } from "@/lib/shared";
 
@@ -85,127 +86,130 @@ export default function AuditPage() {
   }
 
   const canRead = consent && (quoteFiles.length > 0 || quoteText.trim().length > 0);
+  const parts = mode === "parts";
   return (
-    <div className="space-y-5">
-      <h1 className="text-2xl font-bold">{mode === "parts" ? "Parts-list safety check" : t("checkQuote")}</h1>
-      {params.get("compare") && <p className="rounded-xl bg-info/10 text-info px-3 py-2 text-sm">After this check you&apos;ll see it side by side with your earlier quote.</p>}
+    <div className="space-y-6">
+      <header className="space-y-3">
+        <div className="eyebrow">{parts ? "Parts check" : "Check a quote"} · about 5 minutes</div>
+        <h1 className="text-3xl sm:text-5xl font-black leading-[1.02] uppercase tracking-tight">{parts ? "Will these parts work together?" : "Let Roshni check the quote"}</h1>
+        <p className="text-muted max-w-2xl">{parts ? "Upload your parts list or receipts. Roshni checks string voltage, current, battery match and missing protection. No savings maths." : "Upload the quote and your bill. You confirm every line before anything is checked, and Roshni never guesses a model number."}</p>
+      </header>
+      {params.get("compare") && <p className="border-[1.5px] border-ink bg-info/10 text-info px-3 py-2 text-sm font-medium">After this check you&apos;ll see it side by side with your earlier quote.</p>}
+
       {step === 0 && (
-        <div className="flex gap-2 text-sm" role="radiogroup" aria-label="What do you have?">
-          <button onClick={() => setMode("full")} className={`flex-1 rounded-xl border p-3 text-start ${mode === "full" ? "bg-sun/15 border-sun" : "border-line"}`}>
-            <div className="font-semibold">I have an installer&apos;s quote</div>
-            <div className="text-muted">Full check: safety, price, real savings, backup.</div>
-          </button>
-          <button onClick={() => setMode("parts")} className={`flex-1 rounded-xl border p-3 text-start ${mode === "parts" ? "bg-sun/15 border-sun" : "border-line"}`}>
-            <div className="font-semibold">I&apos;m buying parts myself</div>
-            <div className="text-muted">Will these parts work together safely? No savings maths.</div>
-          </button>
+        <div className="grid sm:grid-cols-2 gap-3" role="radiogroup" aria-label="What do you have?">
+          <ChoiceCard on={!parts} onClick={() => setMode("full")} icon="🧾" title="I have an installer's quote" desc="Full check: safety, price, real savings, backup." />
+          <ChoiceCard on={parts} onClick={() => setMode("parts")} icon="🧰" title="I'm buying parts myself" desc="Will these parts work together safely? No savings maths." />
         </div>
       )}
-      <ol className="flex gap-2 text-sm">
-        {steps.map((s, i) => (
-          <li key={s} className={`flex-1 text-center rounded-full py-1 border ${i === step ? "bg-sun/25 border-sun font-semibold" : i < step ? "border-leaf/40 text-leaf" : "border-line text-muted"}`}>
-            {i + 1}. {s}
-          </li>
-        ))}
-      </ol>
+
+      <Stepper steps={steps} current={step} onJump={(i) => setStep(i)} />
       <ErrorBox error={error} />
 
-      {step === 0 && (
-        <Card className="space-y-4">
-          <FilePick files={quoteFiles} onChange={setQuoteFiles}
-            label={mode === "parts" ? "Photos of the parts, receipts or your parts list" : "Upload your installer's quote"} />
-          <div>
-            <label htmlFor="quote-text">{mode === "parts" ? "…or type/paste your parts list" : "…or paste the quote text (e.g. a copied chat message or email)"}</label>
-            <textarea id="quote-text" dir="auto" rows={5} value={quoteText} onChange={(e) => setQuoteText(e.target.value)}
-              placeholder={mode === "parts"
-                ? "12 x Jinko 580W\nGrowatt SPF 6000 ES Plus\n2 x Pylontech US5000"
-                : "10 x LONGi 585W A grade @ 23,400\n6kW Deye hybrid inverter 3.3 lakh\n5kWh lithium battery 2.8 lakh\nStructure, wiring, installation 85k"} />
-          </div>
-          <Consent checked={consent} onChange={setConsent} />
-          <Button onClick={readQuote} disabled={!!busy || !canRead}>{busy ?? `${t("next")} →`}</Button>
-        </Card>
-      )}
+      <div className="relative">
+        {busy && <Processing label={busy} />}
 
-      {stepName === "Bill" && (
-        <Card className="space-y-4">
-          <p className="text-muted">Your latest electricity bill already shows 12 months of units. It lets Roshni use your real price per unit.</p>
-          {!bill && decoded && (
-            <div className="rounded-xl bg-leaf/10 border border-leaf/30 p-3 text-sm flex flex-wrap gap-2 items-center justify-between">
-              <span>You already decoded a bill{decoded.current_units ? ` (${decoded.current_units} units this month)` : ""}. Use it here?</span>
-              <Button onClick={() => { setBill(decoded); if (decoded.phase) setProfile((p) => ({ ...p, phase: decoded.phase })); }}>Use my decoded bill</Button>
-            </div>
-          )}
-          {!bill && <FilePick files={billFile} onChange={setBillFile} multiple={false} label="Upload your latest electricity bill" />}
-          {!bill && !consent && <Consent checked={consent} onChange={setConsent} />}
-          {!bill && (
-            <div className="flex gap-2">
-              <Button variant="ghost" onClick={() => setStep(0)}>{t("back")}</Button>
-              <Button onClick={readBill} disabled={!!busy || !billFile.length || !consent}>{busy ?? "Read bill"}</Button>
-              <Button variant="ghost" onClick={() => setStep(step + 1)}>{t("skip")}</Button>
-            </div>
-          )}
-          {!bill && (
-            <BillLookup<{ bill: Bill; warnings: string[] }> consent={consent} onResult={(r) => {
-              setBill(r.bill); setBillWarnings(r.warnings);
-              if (r.bill.phase) setProfile((p) => ({ ...p, phase: r.bill.phase }));
-            }} />
-          )}
-          {bill && <Issues issues={billWarnings.map((msg) => ({ level: "warn", msg }))} />}
-          {bill && <BillEditor bill={bill} onChange={setBill} />}
-          {bill && (
-            <div className="flex gap-2 flex-wrap">
-              <Button variant="ghost" onClick={() => setStep(0)}>{t("back")}</Button>
-              <Button variant="ghost" onClick={() => { setBill(null); setBillFile([]); }}>Use a different bill</Button>
-              <Button onClick={() => setStep(step + 1)}>{t("next")} →</Button>
-            </div>
-          )}
-        </Card>
-      )}
-
-      {stepName === "Home" && (
-        <Card className="space-y-4">
-          <ProfileForm key={profileFrom} value={profile} onChange={setProfile} showRegime={mode === "full"} />
-          {mode === "full" && bill?.monthly_units_history?.length ? (
-            <label className="!text-ink !text-sm flex items-center gap-2">
-              <input type="checkbox" className="w-4 h-4" checked={profile.scale_to_bill}
-                onChange={(e) => setProfile({ ...profile, scale_to_bill: e.target.checked })} />
-              Adjust my answers to match the 12 months on my bill (recommended: measured beats estimated)
-            </label>
-          ) : null}
-          <div className="flex gap-2"><Button variant="ghost" onClick={() => setStep(step - 1)}>{t("back")}</Button><Button onClick={() => setStep(step + 1)}>{t("next")} →</Button></div>
-        </Card>
-      )}
-
-      {stepName === "Confirm" && quote && system && (
-        <div className="space-y-4">
-          <Card className="space-y-3">
-            <h2 className="font-semibold text-lg">Is this right?</h2>
-            <p className="text-sm text-muted">We read this from your document. Fix anything wrong — nothing is checked until you confirm. Highlighted rows were hard to read.</p>
-            <Issues issues={issues} />
-            {matches.length > 0 && (
-              <p className="text-sm text-leaf">Found in Roshni&apos;s datasheet catalogue: {matches.map((m) => `${m.brand} ${m.model}${m.verified ? " (verified)" : " (unverified)"}`).join(", ")}.</p>
-            )}
-            <ItemsEditor items={quote.line_items} onChange={(line_items) => setQuote({ ...quote, line_items })} />
-            {mode === "full" && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <Num label="Grand total (Rs)" value={quote.grand_total} onChange={(v) => setQuote({ ...quote, grand_total: v })} />
-                <Num label="Savings claimed (Rs/month)" value={quote.claimed_monthly_savings_rs} onChange={(v) => setQuote({ ...quote, claimed_monthly_savings_rs: v })} />
-                <div><label>Payment terms</label><input value={quote.payment_terms ?? ""} onChange={(e) => setQuote({ ...quote, payment_terms: e.target.value })} /></div>
-                <label className="!text-ink !text-sm flex items-center gap-2 col-span-2 sm:col-span-3">
-                  <input type="checkbox" className="w-4 h-4" checked={!!quote.savings_assumes_net_metering}
-                    onChange={(e) => setQuote({ ...quote, savings_assumes_net_metering: e.target.checked })} />
-                  The installer&apos;s savings assume 1:1 net metering (exported units offset imported units)
-                </label>
+        {step === 0 && (
+          <StepShell n={1} title={parts ? "Your parts list" : "Your installer's quote"}
+            desc={parts ? "Photos of the parts, receipts or a typed list are all fine." : "A phone photo, a PDF, a forwarded WhatsApp message or a handwritten slip. English, Urdu or Roman Urdu."}
+            tips={["No account needed", "You confirm every line next", "Prices in lakh or k are converted for you"]}>
+            <Card className="space-y-4">
+              <FilePick files={quoteFiles} onChange={setQuoteFiles}
+                label={parts ? "Drop photos of the parts, receipts or your list" : "Drop your installer's quote here"} />
+              <div className="flex items-center gap-3 text-xs font-mono tracking-widest text-muted"><span className="h-px flex-1 bg-line" />OR PASTE TEXT<span className="h-px flex-1 bg-line" /></div>
+              <div>
+                <label htmlFor="quote-text">{parts ? "Type or paste your parts list" : "Paste the quote text (a copied chat message or email)"}</label>
+                <textarea id="quote-text" dir="auto" rows={5} value={quoteText} onChange={(e) => setQuoteText(e.target.value)}
+                  placeholder={parts
+                    ? "12 x Jinko 580W\nGrowatt SPF 6000 ES Plus\n2 x Pylontech US5000"
+                    : "10 x LONGi 585W A grade @ 23,400\n6kW Deye hybrid inverter 3.3 lakh\n5kWh lithium battery 2.8 lakh\nStructure, wiring, installation 85k"} />
               </div>
-            )}
-          </Card>
-          <SystemEditor system={system} onChange={setSystem} quote={quote} />
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => setStep(step - 1)}>{t("back")}</Button>
-            <Button onClick={submit} disabled={!!busy || (mode === "full" && !system.panel_count)}>{busy ?? (mode === "parts" ? "Check my parts" : "Check my quote")}</Button>
-          </div>
-        </div>
-      )}
+              <Consent checked={consent} onChange={setConsent} />
+              <ActionBar><Button onClick={readQuote} disabled={!!busy || !canRead}>Read my {parts ? "list" : "quote"} <span className="arrow">→</span></Button></ActionBar>
+            </Card>
+          </StepShell>
+        )}
+
+        {stepName === "Bill" && (
+          <StepShell n={2} title="Your electricity bill" desc="One bill shows 12 months of units. It lets Roshni use your real price per unit instead of a guess."
+            tips={["Photo, PDF or the 14-digit reference number", "Your name and address are not copied", "You can skip, with less accurate savings"]}>
+            <Card className="space-y-4">
+              {!bill && decoded && (
+                <div className="border-[1.5px] border-ink bg-leaf/10 p-3 text-sm flex flex-wrap gap-2 items-center justify-between">
+                  <span>You already decoded a bill{decoded.current_units ? ` (${decoded.current_units} units this month)` : ""}. Use it here?</span>
+                  <Button onClick={() => { setBill(decoded); if (decoded.phase) setProfile((p) => ({ ...p, phase: decoded.phase })); }}>Use my decoded bill</Button>
+                </div>
+              )}
+              {!bill && <FilePick files={billFile} onChange={setBillFile} multiple={false} label="Drop your latest electricity bill" />}
+              {!bill && !consent && <Consent checked={consent} onChange={setConsent} />}
+              {!bill && (
+                <BillLookup<{ bill: Bill; warnings: string[] }> consent={consent} onResult={(r) => {
+                  setBill(r.bill); setBillWarnings(r.warnings);
+                  if (r.bill.phase) setProfile((p) => ({ ...p, phase: r.bill.phase }));
+                }} />
+              )}
+              {bill && <Issues issues={billWarnings.map((msg) => ({ level: "warn", msg }))} />}
+              {bill && <BillEditor bill={bill} onChange={setBill} />}
+              <ActionBar>
+                <Button variant="ghost" onClick={() => setStep(0)}>← {t("back")}</Button>
+                {!bill && <Button onClick={readBill} disabled={!!busy || !billFile.length || !consent}>Read bill</Button>}
+                {!bill && <Button variant="ghost" onClick={() => setStep(step + 1)}>{t("skip")}</Button>}
+                {bill && <Button variant="ghost" onClick={() => { setBill(null); setBillFile([]); }}>Use a different bill</Button>}
+                {bill && <Button onClick={() => setStep(step + 1)}>{t("next")} <span className="arrow">→</span></Button>}
+              </ActionBar>
+            </Card>
+          </StepShell>
+        )}
+
+        {stepName === "Home" && (
+          <StepShell n={parts ? 2 : 3} title="Your home" desc="What runs, for how long, and what you need during load-shedding. Saved on this device so you only enter it once."
+            tips={["Or just describe it in your own words", "Backup needs change which rules apply", "Answers are scaled to your bill when you agree"]}>
+            <Card className="space-y-4">
+              <ProfileForm key={profileFrom} value={profile} onChange={setProfile} showRegime={mode === "full"} />
+              {mode === "full" && bill?.monthly_units_history?.length ? (
+                <label className="!text-ink !text-sm flex items-center gap-2">
+                  <input type="checkbox" className="w-4 h-4" checked={profile.scale_to_bill}
+                    onChange={(e) => setProfile({ ...profile, scale_to_bill: e.target.checked })} />
+                  Adjust my answers to match the 12 months on my bill (recommended: measured beats estimated)
+                </label>
+              ) : null}
+              <ActionBar><Button variant="ghost" onClick={() => setStep(step - 1)}>← {t("back")}</Button><Button onClick={() => setStep(step + 1)}>{t("next")} <span className="arrow">→</span></Button></ActionBar>
+            </Card>
+          </StepShell>
+        )}
+
+        {stepName === "Confirm" && quote && system && (
+          <StepShell n={parts ? 3 : 4} title="Is this right?" desc="This is what the AI read from your document. Fix anything wrong. Nothing is checked until you confirm."
+            tips={["Highlighted rows were hard to read", "Missing datasheet values become “cannot verify”", "Look up datasheets, then compare with the real one"]}>
+            <div className="space-y-4">
+              <Card className="space-y-3">
+                <Issues issues={issues} />
+                {matches.length > 0 && (
+                  <p className="text-sm text-leaf">Found in Roshni&apos;s datasheet catalogue: {matches.map((m) => `${m.brand} ${m.model}${m.verified ? " (verified)" : " (unverified)"}`).join(", ")}.</p>
+                )}
+                <ItemsEditor items={quote.line_items} onChange={(line_items) => setQuote({ ...quote, line_items })} />
+                {mode === "full" && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <Num label="Grand total (Rs)" value={quote.grand_total} onChange={(v) => setQuote({ ...quote, grand_total: v })} />
+                    <Num label="Savings claimed (Rs/month)" value={quote.claimed_monthly_savings_rs} onChange={(v) => setQuote({ ...quote, claimed_monthly_savings_rs: v })} />
+                    <div><label>Payment terms</label><input value={quote.payment_terms ?? ""} onChange={(e) => setQuote({ ...quote, payment_terms: e.target.value })} /></div>
+                    <label className="!text-ink !text-sm flex items-center gap-2 col-span-2 sm:col-span-3">
+                      <input type="checkbox" className="w-4 h-4" checked={!!quote.savings_assumes_net_metering}
+                        onChange={(e) => setQuote({ ...quote, savings_assumes_net_metering: e.target.checked })} />
+                      The installer&apos;s savings assume 1:1 net metering (exported units offset imported units)
+                    </label>
+                  </div>
+                )}
+              </Card>
+              <SystemEditor system={system} onChange={setSystem} quote={quote} />
+              <ActionBar>
+                <Button variant="ghost" onClick={() => setStep(step - 1)}>← {t("back")}</Button>
+                <Button onClick={submit} disabled={!!busy || (mode === "full" && !system.panel_count)}>{parts ? "Check my parts" : "Check my quote"} <span className="arrow">→</span></Button>
+              </ActionBar>
+            </div>
+          </StepShell>
+        )}
+      </div>
     </div>
   );
 }

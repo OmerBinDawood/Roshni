@@ -221,9 +221,9 @@ function Size() {
                   <div className="font-medium"><a className="underline" href={`/brands#${b.id}`}>{b.name}</a> <span className="text-muted font-normal">· {b.origin}</span></div>
                   <p className="text-muted">{b.about}</p>
                   <p>{b.pakistan}</p>
-                  {b.prices.length > 0 ? (
+                  {(b.prices ?? []).length > 0 ? (
                     <ul className="mt-1 rounded-lg bg-sun/10 px-2 py-1 text-xs space-y-0.5">
-                      {b.prices.map((p) => (
+                      {(b.prices ?? []).map((p) => (
                         <li key={p.product}><b>{priceText(p)}</b> · {p.product} · {p.as_of ? `listed ${p.as_of}` : "undated"} ({p.confidence}) · <a className="underline" href={p.source} target="_blank" rel="noreferrer">source</a>{p.note ? ` · ${p.note}` : ""}</li>
                       ))}
                     </ul>
@@ -247,7 +247,7 @@ function Size() {
                 <div key={k}><label htmlFor={`est-${k}`}>{out.brand_options[k].label} brand</label>
                   <select id={`est-${k}`} value={pick[k]} onChange={(e) => setPick({ ...pick, [k]: e.target.value })}>
                     <option value="">Not decided (market range)</option>
-                    {out.brand_options[k].brands.map((b) => <option key={b.id} value={b.id}>{b.name}{b.prices.some((p) => p.category === k) ? "" : " (no price listed)"}</option>)}
+                    {out.brand_options[k].brands.map((b) => <option key={b.id} value={b.id}>{b.name}{(b.prices ?? []).some((p) => p.category === k) ? "" : " (no price listed)"}</option>)}
                   </select></div>
               ))}
             </div>

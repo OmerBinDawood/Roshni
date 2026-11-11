@@ -1,7 +1,7 @@
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Badge, Button, Card, ErrorBox, Issues } from "@/components/ui";
+import { Button, Card, ErrorBox, Issues } from "@/components/ui";
 import { api, rs, type Finding } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
 import { deviceReports, ownerToken, useSession } from "@/lib/supabase";
@@ -19,6 +19,7 @@ const VERDICT = {
   amber: { cls: "bg-warn/10 border-warn/40 text-warn", en: "Ask the installer before paying", ur: "ادائیگی سے پہلے انسٹالر سے وضاحت لیں" },
   green: { cls: "bg-leaf/10 border-leaf/40 text-leaf", en: "Looks reasonable on what we could check", ur: "جو ہم چیک کر سکے وہ مناسب لگتا ہے" },
 } as const;
+const TONE = { red: "bg-[#fff0ee]", amber: "bg-[#fff6e5]", green: "bg-[#ecfaf3]" } as const;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Installer conversation kit (PRD 9.8): general checklist + red flags, alongside the personalised questions
@@ -101,22 +102,37 @@ export default function ReportView() {
 
   return (
     <div className="space-y-5">
-      <div className={`rounded-2xl border p-5 ${v.cls}`}>
-        <div className="text-sm opacity-80">{parts ? "Roshni parts-list safety check" : "Roshni second opinion"} · {rep.versions.generated}</div>
-        <h1 className={`text-2xl sm:text-3xl font-bold mt-1 ${ur ? "urdu" : ""}`}>{(() => { const w = parts ? VERDICT_PARTS[rep.verdict as keyof typeof VERDICT_PARTS] : v; return ur ? w.ur : w.en; })()}</h1>
-        <p className="mt-1 text-ink">{rep.counts.critical} critical · {rep.counts.clarify} to clarify · System {rep.system_summary.dc_kwp} kWp, {rep.system_summary.inverter_kw ?? "?"} kW {rep.system_summary.inverter_type.replace("_", "-")}{rep.system_summary.battery_usable_kwh ? `, ${rep.system_summary.battery_usable_kwh} kWh battery` : ""}</p>
+      <div className={`relative overflow-hidden border-[1.5px] border-ink p-5 sm:p-8 shadow-[8px_8px_0_0_var(--ink)] ${TONE[rep.verdict as keyof typeof TONE]}`}>
+        <div aria-hidden className="absolute -right-24 -top-24 w-72 h-72 rounded-full bg-[radial-gradient(circle,rgba(255,176,32,0.55),transparent_65%)]" />
+        <div className="relative">
+          <div className="font-mono text-[0.7rem] tracking-[0.16em] font-bold uppercase">{parts ? "Roshni parts-list safety check" : "Roshni second opinion"} · {rep.versions.generated}</div>
+          <h1 className={`mt-3 text-3xl sm:text-6xl font-black leading-[0.98] tracking-tight ${ur ? "urdu" : "uppercase"} ${rep.verdict === "red" ? "text-bad" : rep.verdict === "amber" ? "text-warn" : "text-leaf"}`}>{(() => { const w = parts ? VERDICT_PARTS[rep.verdict as keyof typeof VERDICT_PARTS] : v; return ur ? w.ur : w.en; })()}</h1>
+          <div className="mt-5 flex flex-wrap gap-2 font-mono text-[0.7rem] sm:text-xs font-bold tracking-wider">
+            <span className="bg-white border-[1.5px] border-ink px-2.5 py-1"><span className="inline-block w-2 h-2 bg-bad mr-1.5" />{rep.counts.critical} CRITICAL</span>
+            <span className="bg-white border-[1.5px] border-ink px-2.5 py-1"><span className="inline-block w-2 h-2 bg-warn mr-1.5" />{rep.counts.clarify} TO CLARIFY</span>
+            <span className="bg-white border-[1.5px] border-ink px-2.5 py-1">{rep.system_summary.dc_kwp} kWp · {rep.system_summary.inverter_kw ?? "?"} kW {rep.system_summary.inverter_type.replace("_", "-").toUpperCase()}{rep.system_summary.battery_usable_kwh ? ` · ${rep.system_summary.battery_usable_kwh} kWh` : ""}</span>
+          </div>
+        </div>
       </div>
 
-      <div className="no-print flex flex-wrap gap-2">
+      <nav aria-label="Report sections" className="no-print sticky top-[4.6rem] z-30 -mx-4 px-4 py-2 bg-[#fffaf0]/90 backdrop-blur overflow-x-auto">
+        <ul className="flex gap-2 font-mono text-[0.68rem] font-bold tracking-wider whitespace-nowrap">
+          {[["summary", "SUMMARY"], ["findings", "FINDINGS"], ["backup", "LOAD-SHEDDING"], ["brands", "BRANDS"], ["kit", "INSTALLER KIT"], ["year", "YOUR YEAR"]].map(([id, label]) => (
+            <li key={id}><a href={`#${id}`} className="inline-block border-[1.5px] border-ink/40 bg-white px-3 py-1.5 hover:bg-sun hover:border-ink transition-colors">{label}</a></li>
+          ))}
+        </ul>
+      </nav>
+
+      <div className="no-print flex flex-wrap gap-2 items-center">
         <Button variant="ghost" onClick={() => copy(window.location.href, "link")}>{copied === "link" ? "Copied ✓" : "🔗 Share link"}</Button>
         <Button variant="ghost" onClick={() => window.print()}>🖨️ Save as PDF</Button>
         <Button variant="ghost" onClick={() => window.dispatchEvent(new Event("roshni:open-assistant"))}>💬 Ask about this report</Button>
-        {!parts && <a href={`/audit?compare=${id}`} className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">⚖️ Compare with another quote</a>}
-        {!parts && rep.system_summary.inverter_kw && <a href={`/battery?report=${id}`} className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">🔋 Should I add a battery?</a>}
-        {!parts && f && <a href={`/financing?report=${id}`} className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">🏦 Loan vs savings</a>}
+        {!parts && <a href={`/audit?compare=${id}`} className="btn btn-ghost">⚖️ Compare with another quote</a>}
+        {!parts && rep.system_summary.inverter_kw && <a href={`/battery?report=${id}`} className="btn btn-ghost">🔋 Should I add a battery?</a>}
+        {!parts && f && <a href={`/financing?report=${id}`} className="btn btn-ghost">🏦 Loan vs savings</a>}
         {access?.can_manage && !access.owned_by_you && (session
           ? <Button variant="ghost" onClick={saveToAccount}>💾 Save to my account</Button>
-          : <a href="/account" className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">💾 Sign in to save</a>)}
+          : <a href="/account" className="btn btn-ghost">💾 Sign in to save</a>)}
         {access?.owned_by_you && <span className="text-leaf self-center text-sm">✓ Saved to your account</span>}
         {translating && <span className="text-muted self-center">Translating to Urdu…</span>}
         {trError && <span className="text-bad self-center text-sm">Urdu translation failed: {trError}</span>}
@@ -130,20 +146,20 @@ export default function ReportView() {
       )}
 
       {!parts && f && (
-        <div className="grid sm:grid-cols-3 gap-3">
+        <div id="summary" className="scroll-mt-32 grid sm:grid-cols-3 gap-3">
           <Card>
-            <div className="text-sm text-muted">Estimated saving / month</div>
-            <div className="text-2xl font-bold">{rs(f.savings_monthly.low)} – {rs(f.savings_monthly.high)}</div>
+            <div className="font-mono text-[0.68rem] tracking-[0.14em] text-muted uppercase">Estimated saving / month</div>
+            <div className="mt-1 text-2xl sm:text-3xl font-black tabular-nums">{rs(f.savings_monthly.low)} – {rs(f.savings_monthly.high)}</div>
             <div className="text-sm text-muted">expected {rs(f.savings_monthly.expected)} · {f.regime_label}</div>
           </Card>
           <Card>
-            <div className="text-sm text-muted">Simple payback</div>
-            <div className="text-2xl font-bold">{rep.cashflow?.payback_years ? `${rep.cashflow.payback_years} years` : "–"}</div>
+            <div className="font-mono text-[0.68rem] tracking-[0.14em] text-muted uppercase">Simple payback</div>
+            <div className="mt-1 text-2xl sm:text-3xl font-black tabular-nums">{rep.cashflow?.payback_years ? `${rep.cashflow.payback_years} years` : "–"}</div>
             <div className="text-sm text-muted">on {rs(rep.capex)} · 10-yr net {rs(rep.cashflow?.cum_10y)} · 25-yr {rs(rep.cashflow?.cum_25y)}</div>
           </Card>
           <Card>
-            <div className="text-sm text-muted">Bill today (modelled)</div>
-            <div className="text-2xl font-bold">{rs(f.bill_before_monthly)}/mo</div>
+            <div className="font-mono text-[0.68rem] tracking-[0.14em] text-muted uppercase">Bill today (modelled)</div>
+            <div className="mt-1 text-2xl sm:text-3xl font-black tabular-nums">{rs(f.bill_before_monthly)}/mo</div>
             <div className="text-sm text-muted">fixed charge {rs(f.fixed_charge)} stays after solar</div>
           </Card>
         </div>
@@ -176,7 +192,7 @@ export default function ReportView() {
       )}
 
       {rep.brands?.length > 0 && (
-        <Card>
+        <div id="brands" className="scroll-mt-32"><Card>
           <h2 className="font-semibold">About the brands in this {parts ? "parts list" : "quote"}</h2>
           <p className="text-sm text-muted">Roshni does not rank brands. A known name does not protect you from fake or B-grade stock: verify the exact items you receive.</p>
           <div className="mt-3 space-y-3">
@@ -195,36 +211,53 @@ export default function ReportView() {
               </div>
             ))}
           </div>
-        </Card>
+        </Card></div>
       )}
 
-      <Card>
-        <h2 className="font-semibold">In load-shedding</h2>
+      <div id="backup" className="scroll-mt-32"><Card>
+        <h2 className="font-semibold text-xl">In load-shedding</h2>
         <p className="text-sm text-muted">{rep.backup.outage_hours_per_day} h/day outages · backup load ~{rep.backup.running_kw} kW{rep.backup.battery_usable_kwh ? ` · ${rep.backup.battery_usable_kwh} kWh usable battery` : ""}</p>
-        <ul className="mt-2 divide-y divide-line">
+        <ul className="mt-3 grid sm:grid-cols-2 gap-2">
           {rep.backup.items?.map((it: any) => (
-            <li key={it.name} className="py-2 flex items-center justify-between gap-3 text-sm">
-              <span>{it.runs === true ? "✅" : it.runs === "day_only" ? "🌤️" : "❌"} {it.count > 1 ? `${it.count} × ` : ""}{it.name} <span className="text-muted">({it.kw} kW)</span></span>
-              <span className="text-muted text-end">{it.reason}</span>
+            <li key={it.name} className={`flex items-start gap-3 border-[1.5px] p-3 text-sm ${it.runs === true ? "border-leaf/50 bg-leaf/10" : it.runs === "day_only" ? "border-sun bg-sun/15" : "border-bad/40 bg-bad/10"}`}>
+              <span className="w-8 h-8 shrink-0 grid place-items-center text-lg bg-white border border-ink/60">{it.runs === true ? "✅" : it.runs === "day_only" ? "🌤️" : "❌"}</span>
+              <span><span className="block font-bold">{it.count > 1 ? `${it.count} × ` : ""}{it.name} <span className="font-normal text-muted">({it.kw} kW)</span></span><span className="block text-muted">{it.reason}</span></span>
             </li>
           ))}
         </ul>
-      </Card>
+      </Card></div>
 
-      <section className="space-y-3">
-        <h2 className="text-xl font-semibold">Findings</h2>
-        {findings.filter((x) => x.severity !== "OK").map((x, i) => (
-          <Card key={x.rule_id + i}>
-            <div className="flex items-start justify-between gap-3">
-              <h3 className={`font-semibold ${ur ? "urdu" : ""}`}>{T(x, "title")}</h3>
-              <Badge severity={x.severity} />
+      <section id="findings" className="scroll-mt-32 space-y-4">
+        <div className="eyebrow">Findings</div>
+        <h2 className="text-2xl sm:text-4xl font-black uppercase tracking-tight">What Roshni found</h2>
+        {(["CRITICAL", "CLARIFY", "INFO"] as const).map((sev) => {
+          const list = findings.filter((x) => x.severity === sev);
+          if (!list.length) return null;
+          const col = sev === "CRITICAL" ? ["bg-bad", "text-bad", "border-bad/40", "bg-bad/5"] : sev === "CLARIFY" ? ["bg-warn", "text-warn", "border-warn/40", "bg-warn/5"] : ["bg-info", "text-info", "border-info/40", "bg-info/5"];
+          return (
+            <div key={sev} className="relative ps-6 sm:ps-8">
+              <span aria-hidden className={`absolute start-[0.6rem] sm:start-[0.8rem] top-3 bottom-0 w-[3px] ${col[0]} opacity-40`} />
+              <div className={`mb-2 font-mono text-[0.72rem] font-bold tracking-[0.16em] ${col[1]} flex items-center gap-2`}><span className={`absolute start-0 sm:start-[0.2rem] w-[1.4rem] h-[1.4rem] ${col[0]} border-[1.5px] border-ink grid place-items-center text-white text-[0.65rem]`}>{list.length}</span>{sev === "CRITICAL" ? "CRITICAL: FIX BEFORE PAYING" : sev === "CLARIFY" ? "ASK THE INSTALLER" : "GOOD TO KNOW"}</div>
+              <div className="space-y-2">
+                {list.map((x, i) => (
+                  <details key={x.rule_id + i} open={sev === "CRITICAL" && i < 2} className={`group border-[1.5px] ${col[2]} ${col[3]} bg-white open:shadow-[4px_4px_0_0_rgba(15,27,45,0.9)] transition-shadow`}>
+                    <summary className="flex items-start gap-3 p-3 sm:p-4 cursor-pointer list-none">
+                      <span className="font-mono text-xs font-bold bg-ink text-white px-1.5 py-0.5 mt-0.5 shrink-0">{x.rule_id}</span>
+                      <span className={`flex-1 font-bold leading-snug ${ur ? "urdu" : ""}`}>{T(x, "title")}</span>
+                      <span className="shrink-0 w-6 h-6 grid place-items-center border border-ink/40 transition-transform group-open:rotate-180" aria-hidden>⌄</span>
+                    </summary>
+                    <div className="px-3 sm:px-4 pb-4 space-y-2">
+                      {x.detail && <p className={ur ? "urdu" : ""}>{T(x, "detail")}</p>}
+                      {x.evidence && <p className="text-sm font-mono bg-bg border border-line px-3 py-2 break-words" dir="ltr">{x.evidence}</p>}
+                      {x.question && <p className={`text-sm border-s-4 border-sun bg-sun/10 px-3 py-2 ${ur ? "urdu" : ""}`}><b>Ask:</b> {T(x, "question")}</p>}
+                      <p className="text-xs text-muted">Rule {x.rule_id} · <a className="underline" href="/about#rules">how rules work</a></p>
+                    </div>
+                  </details>
+                ))}
+              </div>
             </div>
-            {x.detail && <p className={`mt-1 ${ur ? "urdu" : ""}`}>{T(x, "detail")}</p>}
-            {x.evidence && <p className="mt-1 text-sm text-muted font-mono" dir="ltr">{x.evidence}</p>}
-            {x.question && <p className={`mt-2 text-sm ${ur ? "urdu" : ""}`}>❓ {T(x, "question")}</p>}
-            <p className="mt-1 text-xs text-muted">Rule {x.rule_id} · <a className="underline" href="/about#rules">how rules work</a></p>
-          </Card>
-        ))}
+          );
+        })}
         {findings.some((x) => x.severity === "OK") && (
           <Card>
             <h3 className="font-semibold text-leaf">Checks that passed</h3>
@@ -235,9 +268,9 @@ export default function ReportView() {
         )}
       </section>
 
-      <Card>
+      <div id="kit" className="scroll-mt-32"><Card>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-semibold text-lg">Installer conversation kit</h2>
+          <h2 className="font-semibold text-xl">Installer conversation kit</h2>
           <Button variant="ghost" className="no-print" onClick={() => copy(
             [...questions.map((q, i) => `${i + 1}. ${T(q, "question")}`), "", ...CHECKLIST.map((c) => `☐ ${L(c)}`)].join("\n"), "q")}>
             {copied === "q" ? "Copied ✓" : "Copy all"}
@@ -253,11 +286,11 @@ export default function ReportView() {
         <ul className={`mt-1 space-y-1 text-sm ${ur ? "urdu" : ""}`}>{CHECKLIST.map((c) => <li key={c[0]}>☐ {L(c)}</li>)}</ul>
         <h3 className="mt-3 font-medium text-bad">Red flags</h3>
         <ul className={`mt-1 space-y-1 text-sm ${ur ? "urdu" : ""}`}>{RED_FLAGS.map((c) => <li key={c[0]}>🚩 {L(c)}</li>)}</ul>
-      </Card>
+      </Card></div>
 
       {!parts && f && (
-        <Card>
-          <h2 className="font-semibold">Your year, month by month (units)</h2>
+        <div id="year" className="scroll-mt-32"><Card>
+          <h2 className="font-semibold text-xl">Your year, month by month (units)</h2>
           <div className="mt-3 flex items-end gap-1 h-40" dir="ltr">
             {f.energy_monthly.map((m: any) => (
               <div key={m.month} className="flex-1 flex flex-col items-center gap-1" title={`Solar ${m.pv} · Use ${m.load} · Export ${m.export} · Import ${m.import}`}>
@@ -271,7 +304,7 @@ export default function ReportView() {
           </div>
           <div className="mt-2 text-xs text-muted flex gap-4"><span><span className="inline-block w-3 h-3 bg-sun rounded-sm align-middle" /> Solar</span><span><span className="inline-block w-3 h-3 bg-info/60 rounded-sm align-middle" /> Your use</span></div>
           <p className="mt-2 text-sm text-muted">Year: {f.annual.pv_kwh.toLocaleString()} units generated, {f.annual.self_consumed_kwh.toLocaleString()} used at home, {f.annual.export_kwh.toLocaleString()} exported, {f.annual.import_kwh.toLocaleString()} still bought from grid.</p>
-        </Card>
+        </Card></div>
       )}
 
       <Card>

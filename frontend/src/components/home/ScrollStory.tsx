@@ -81,7 +81,7 @@ export default function ScrollStory() {
   return (
     <section className="relative bg-[linear-gradient(180deg,#ffffff,#fff3d6_40%,#fffaf0)]">
       <div className="max-w-6xl mx-auto px-5 pt-20 text-center">
-        <div className="text-sm font-bold uppercase tracking-[0.18em] text-sun-ink">How it works</div>
+        <div className="eyebrow">03 / How it works</div>
         <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold">From messy quote to clear decision</h2>
         <p className="mt-3 text-lg text-muted max-w-2xl mx-auto">Scroll. Watch one real-style quote change as Roshni works on it.</p>
       </div>

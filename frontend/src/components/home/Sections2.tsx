@@ -21,7 +21,7 @@ export function Simulator() {
     <section className="bg-white py-24">
       <div className="max-w-6xl mx-auto px-5 grid lg:grid-cols-[1fr_1.1fr] gap-12 items-center">
         <Reveal>
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-sun-ink">Net billing, made visible</div>
+          <div className="eyebrow">04 / Net billing, made visible</div>
           <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold leading-tight">When you use your solar matters more than how much you make</h2>
           <p className="mt-4 text-lg text-muted">Under the 2026 rules a unit you use yourself is worth about four times a unit you export. Move the slider and see why Roshni simulates all 8,760 hours of a year instead of using a monthly average.</p>
 
@@ -91,7 +91,7 @@ export function AuditConsole() {
     <section className="relative bg-[linear-gradient(180deg,#fffaf0,#fff)] py-24 overflow-hidden">
       <div className="max-w-6xl mx-auto px-5 grid lg:grid-cols-[0.9fr_1.1fr] gap-12 items-center">
         <Reveal>
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-sun-ink">The audit</div>
+          <div className="eyebrow">05 / The audit</div>
           <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold leading-tight">Every finding shows its evidence and the question to ask</h2>
           <p className="mt-4 text-lg text-muted">No mystery score. Each rule is specific and testable, written in plain language, and ends with something you can say to the installer.</p>
           <ul className="mt-6 space-y-3">

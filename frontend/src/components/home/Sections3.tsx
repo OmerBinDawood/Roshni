@@ -91,7 +91,7 @@ export function Features() {
     <section className="bg-white py-24" id="features">
       <div className="max-w-6xl mx-auto px-5">
         <Reveal className="max-w-3xl">
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-sun-ink">Everything in one place</div>
+          <div className="eyebrow">06 / Everything in one place</div>
           <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold leading-tight">Whatever the solar question, there is a door for it</h2>
         </Reveal>
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -135,7 +135,7 @@ export function SizingPreview() {
     <section className="relative py-24 bg-[linear-gradient(180deg,#fff,#eaf2ff_60%,#fffaf0)] overflow-hidden">
       <div className="max-w-6xl mx-auto px-5">
         <Reveal className="max-w-3xl">
-          <div className="text-sm font-bold uppercase tracking-[0.18em] text-sun-ink">Size my solar</div>
+          <div className="eyebrow">07 / Size my solar</div>
           <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold leading-tight">No quote yet? Know what to ask for before you call anyone</h2>
           <p className="mt-4 text-lg text-muted">Tell Roshni your appliances, bill and budget. It works out your load and shows sized options with costs, then the brands to look at, with dated public prices.</p>
         </Reveal>
