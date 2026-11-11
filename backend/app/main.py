@@ -459,3 +459,22 @@ def financing(f: extras.FinanceIn):
     if f.down_payment_rs >= f.amount_rs:
         raise HTTPException(400, "Down payment must be less than the system price.")
     return extras.financing(f)
+
+
+# ---------- brand guide ----------
+from .engine import brands as brand_guide  # noqa: E402
+
+
+@app.get("/api/brands")
+def list_brands():
+    g = brand_guide.guide()
+    return {"as_of": g["as_of"], "policy": g["policy"], "category_labels": brand_guide.CATEGORY_LABELS,
+            "category_checks": g["category_checks"], "brands": g["brands"]}
+
+
+@app.get("/api/brands/{bid}")
+def get_brand(bid: str):
+    b = next((x for x in brand_guide.guide()["brands"] if x["id"] == bid), None)
+    if not b:
+        raise HTTPException(404, "Brand not found")
+    return b

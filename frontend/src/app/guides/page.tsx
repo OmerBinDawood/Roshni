@@ -35,6 +35,7 @@ export default function Guides() {
           <li>Look for cracked cells, bubbles, scratches or a bent frame before installation; refuse damaged panels.</li>
           <li>Ask who honours the warranty in Pakistan and keep the invoice that shows the serial numbers.</li>
         </ul>
+        <p className="mt-2 text-sm">Brand-by-brand verification links and checks: <a className="underline" href="/brands">Brand guide</a>.</p>
         <p className="text-xs text-muted mt-2">Roshni guides you on what to check. It does not certify that any product is genuine.</p>
       </Card>
 

@@ -126,7 +126,9 @@ def lookup_specs(kind: Literal["panel", "inverter", "battery"], brand: str, mode
 
 
 # ---------- Assistant ("Roshni Madadgar") ----------
-KNOWLEDGE = (DATA_DIR / "knowledge.md").read_text(encoding="utf-8")
+from .engine.brands import knowledge_text  # noqa: E402
+
+KNOWLEDGE = (DATA_DIR / "knowledge.md").read_text(encoding="utf-8") + "\n\n" + knowledge_text()
 
 ASSISTANT_SYS = f"""You are Roshni Madadgar, the helper inside Roshni, an independent solar second-opinion web app for Pakistan.
 Rules:
@@ -134,7 +136,8 @@ Rules:
   unless they ask for detail ("tafseel se batayein").
 - Never invent numbers. Only quote numbers that appear in the CONTEXT JSON (the user's own report/bill) or the KNOWLEDGE BASE,
   and mention the "as of" date for prices and rules. If a number is not available, say what Roshni would need to calculate it.
-- No brand rankings or "best inverter" answers; explain how to compare instead.
+- No brand rankings or "best inverter" answers; explain how to compare instead. You may describe any brand factually from
+  the brand guide below (who makes it, what it is, how to verify it) and always add the checks that matter.
 - Safety issues (burning smell, sparking, water ingress, structural cracks): tell them to switch off and call a qualified
   electrician / PEC-registered engineer. Do not guess.
 - Roshni never tells users where to buy; it helps them check and ask the right questions.

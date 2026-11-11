@@ -1,0 +1,893 @@
+{
+  "version": "2026-11-11",
+  "as_of": "2026-11-11",
+  "policy": "Roshni does not rank brands, recommend where to buy, or earn anything from any brand. Profiles describe who makes a product, what it is, and what to check. A well-known brand name does not protect you from fake, B-grade or wrongly matched equipment: the checks matter more than the logo.",
+  "category_checks": {
+    "panel": [
+      "Get the exact model number and the datasheet, and check the label on the back matches it (watts, Voc, Isc).",
+      "Verify every serial number on the manufacturer's own website or app, never on a link the seller sends.",
+      "Ask for A-grade panels from an authorised distributor, in writing. Very cheap 'same brand' panels are often B-grade or copies.",
+      "Check the manufacturing date and that the model is current: older large-format stock is sold cheaply as makers move to new standards (China's GB 47834-2026 takes effect 1 Jan 2027), which can make replacements and warranty claims harder.",
+      "Get the product warranty (often 12 years) and performance warranty (often 25-30 years) in writing, with the name of the company in Pakistan that will honour it.",
+      "Do not mix different panel models or wattages in the same string."
+    ],
+    "inverter": [
+      "On-grid inverters switch off during load-shedding. If you need backup, you need a hybrid (or off-grid) inverter.",
+      "Check the maximum DC voltage and MPPT range against your string on the coldest morning (Roshni's rules R03-R05 do this).",
+      "For a battery: check the inverter's battery voltage class (low-voltage 48 V or high-voltage) and that your battery is on the maker's published approved-battery list, with the right communication protocol (CAN or RS485).",
+      "Match single-phase or three-phase to your connection.",
+      "Ask who repairs it in Pakistan, where the nearest service centre is, and whether the warranty is honoured locally and in writing.",
+      "For net billing, ask the installer to confirm the model and its settings are accepted by your DISCO."
+    ],
+    "battery_lithium": [
+      "Compare usable kWh (after depth-of-discharge limits), not just nominal kWh or Ah.",
+      "Check the battery is on your inverter maker's approved list, and that the BMS talks to the inverter (CAN or RS485). Some combinations also need a minimum battery firmware.",
+      "Check continuous discharge power (kW) covers what must run during load-shedding, including motor and fridge starts.",
+      "Ask for the warranty in years AND cycles, the depth of discharge it assumes, and who in Pakistan honours it.",
+      "Many brands sell packs assembled from bought-in cells: ask who makes the cells and the BMS, and for the cell datasheet.",
+      "LiFePO4 (LFP) chemistry is the common choice for home storage; ask which chemistry the pack uses."
+    ],
+    "battery_lead_acid": [
+      "Tubular deep-cycle batteries suit UPS and solar backup better than car-type batteries.",
+      "Compare capacity at the stated discharge rate (e.g. C10 or C20) and the warranty period; lead-acid usually lasts far fewer cycles than lithium.",
+      "Flooded tubular batteries need distilled-water top-ups and ventilation; sealed (maintenance-free) ones do not need topping up.",
+      "Do not mix old and new batteries, or different brands and capacities, in one bank.",
+      "Check the inverter's charging settings match lead-acid, and that the battery's date code is recent.",
+      "Keep the warranty card and invoice; ask about the dealer's replacement policy."
+    ]
+  },
+  "brands": [
+    {
+      "id": "longi",
+      "name": "LONGi",
+      "aliases": [
+        "longi solar",
+        "longi green energy",
+        "hi-mo",
+        "himo",
+        "lr5",
+        "lr7",
+        "lr8"
+      ],
+      "categories": [
+        "panel"
+      ],
+      "kind": "international",
+      "origin": "China (Xi'an)",
+      "about": "One of the world's largest monocrystalline silicon and module manufacturers. Panels sold under the Hi-MO name (e.g. Hi-MO 6, Hi-MO 9, Hi-MO X series); model codes start with LR5 or LR7.",
+      "technology": "Back-contact (BC / HPBC) cells on recent ranges; listed among the highest commercial module efficiencies (about 25% in TaiyangNews' Oct 2026 listing).",
+      "pakistan": "Widely sold in Pakistan and widely copied. Verify every panel.",
+      "verify": {
+        "label": "LONGi module authenticity check (enter the serial number)",
+        "url": "https://www.longi.com/en/modules-authenticity/"
+      },
+      "sources": [
+        "https://en.wikipedia.org/wiki/LONGi",
+        "https://taiyangnews.info/topmodules/top-solar-modules-listing-october-2026",
+        "https://www.longi.com/en/modules-authenticity/"
+      ]
+    },
+    {
+      "id": "jinko",
+      "name": "Jinko Solar",
+      "aliases": [
+        "jinko",
+        "jinkosolar",
+        "tiger neo",
+        "tiger pro",
+        "jkm"
+      ],
+      "categories": [
+        "panel"
+      ],
+      "kind": "international",
+      "origin": "China (Shanghai)",
+      "about": "Large global module maker. Panels sold as the Tiger Neo series; model codes start with JKM.",
+      "technology": "N-type TOPCon (Tiger Neo), including bifacial versions; Tiger Neo 5.0 shown at SNEC 2026.",
+      "pakistan": "Widely sold in Pakistan and widely copied. Each module carries a unique serial number laminated inside it.",
+      "verify": {
+        "label": "No public online serial check confirmed; ask Jinko support or the authorised distributor to confirm serial numbers in writing",
+        "url": null
+      },
+      "sources": [
+        "https://en.wikipedia.org/wiki/JinkoSolar",
+        "https://www.energytrend.com/news/20260605-51530.html"
+      ]
+    },
+    {
+      "id": "ja-solar",
+      "name": "JA Solar",
+      "aliases": [
+        "ja",
+        "jasolar",
+        "deepblue",
+        "jam"
+      ],
+      "categories": [
+        "panel"
+      ],
+      "kind": "international",
+      "origin": "China",
+      "about": "Large global module maker. Panels sold as the DeepBlue series; model codes start with JAM.",
+      "technology": "N-type TOPCon; DeepBlue 5.0 listed at 24.1% efficiency (TaiyangNews, Oct 2026).",
+      "pakistan": "Widely available in Pakistan.",
+      "verify": {
+        "label": "JA Solar product verification page (serial number / product code)",
+        "url": "https://product.jasolar.com/en.html"
+      },
+      "sources": [
+        "https://taiyangnews.info/topmodules/top-solar-modules-listing-october-2026",
+        "https://product.jasolar.com/en.html"
+      ]
+    },
+    {
+      "id": "canadian-solar",
+      "name": "Canadian Solar",
+      "aliases": [
+        "canadian",
+        "csi",
+        "cs6",
+        "cs7",
+        "hiku",
+        "tophiku"
+      ],
+      "categories": [
+        "panel"
+      ],
+      "kind": "international",
+      "origin": "Founded in Canada; manufacturing mainly in Asia",
+      "about": "Listed international manufacturer of panels and storage. Model codes start with CS (e.g. CS6W, CS7N); HiKu / TOPHiKu series.",
+      "technology": "TOPCon on current ranges; third-generation TOPCon up to about 670 W.",
+      "pakistan": "Sold in Pakistan. No public online serial check was found on Canadian Solar's own site; ask the distributor for written serial confirmation.",
+      "verify": {
+        "label": "No public online serial check found; ask the authorised distributor to confirm serial numbers in writing",
+        "url": null
+      },
+      "sources": [
+        "https://www.sec.gov/Archives/edgar/data/1375877/000110465926001793/tm262369d1_ex99-1.htm"
+      ]
+    },
+    {
+      "id": "trina",
+      "name": "Trina Solar",
+      "aliases": [
+        "trina",
+        "trinasolar",
+        "vertex",
+        "tsm"
+      ],
+      "categories": [
+        "panel"
+      ],
+      "kind": "international",
+      "origin": "China (Changzhou)",
+      "about": "Large global module maker for homes, businesses and utilities. Panels sold as the Vertex series; model codes start with TSM.",
+      "technology": "N-type TOPCon (Vertex N, i-TOPCon); showed TOPCon 3.0 and a hybrid BC module at SNEC 2026.",
+      "pakistan": "Sold in Pakistan.",
+      "verify": {
+        "label": "Trina customer service module query (serial number)",
+        "url": "https://customerservice.trinasolar.com/#/moduleQuery/index"
+      },
+      "sources": [
+        "https://taiyangnews.info/topmodules/top-solar-modules-listing-october-2026",
+        "https://www.energytrend.com/news/20260605-51530.html"
+      ]
+    },
+    {
+      "id": "aiko",
+      "name": "AIKO",
+      "aliases": [
+        "aiko solar",
+        "abc"
+      ],
+      "categories": [
+        "panel"
+      ],
+      "kind": "international",
+      "origin": "China",
+      "about": "Cell and module maker focused on back-contact technology.",
+      "technology": "ABC (all back contact) cells; listed joint-first in commercial module efficiency (about 25%, TaiyangNews Oct 2026).",
+      "pakistan": "Less common than the brands above; check distributor and warranty support carefully.",
+      "verify": {
+        "label": "No public serial check found; ask the distributor",
+        "url": null
+      },
+      "sources": [
+        "https://taiyangnews.info/topmodules/top-solar-modules-listing-october-2026",
+        "https://aikosolar.com/en/"
+      ]
+    },
+    {
+      "id": "astronergy",
+      "name": "Astronergy",
+      "aliases": [
+        "astro",
+        "chint solar",
+        "astro n"
+      ],
+      "categories": [
+        "panel"
+      ],
+      "kind": "international",
+      "origin": "China (part of Chint Group)",
+      "about": "Module maker owned by the Chint Group; ranges include ASTRO N.",
+      "technology": "N-type TOPCon.",
+      "pakistan": "Sold in Pakistan through distributors.",
+      "verify": {
+        "label": "Astronergy module authenticity page (serial number)",
+        "url": "https://www.astronergy.com/module-authenticity/"
+      },
+      "sources": [
+        "https://www.bouncewatch.com/explore/startup/astronergy"
+      ]
+    },
+    {
+      "id": "risen",
+      "name": "Risen Energy",
+      "aliases": [
+        "risen",
+        "hyper-ion"
+      ],
+      "categories": [
+        "panel"
+      ],
+      "kind": "international",
+      "origin": "China (Ningbo, Zhejiang)",
+      "about": "Listed Chinese module maker (Shenzhen ChiNext).",
+      "technology": "Heterojunction (HJT, Hyper-ion series) as its main line, plus TOPCon modules.",
+      "pakistan": "Sold in Pakistan through distributors.",
+      "verify": {
+        "label": "No public serial check found; ask the distributor",
+        "url": null
+      },
+      "sources": [
+        "https://globaldata.com/company-profile/risen-energy-co-ltd",
+        "https://www.pv-tech.org/risen-energy-begins-commercial-production-of-hyper-ion-hjt-cell-of-23-89-conversion-efficiency/"
+      ]
+    },
+    {
+      "id": "crown",
+      "name": "Crown (Crown Solar Energy / Crown Micro)",
+      "aliases": [
+        "crown solar",
+        "crown micro",
+        "crown micro global",
+        "xavier"
+      ],
+      "categories": [
+        "panel",
+        "inverter",
+        "battery_lithium"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan",
+      "about": "Sells panels, inverters and lithium batteries in Pakistan through authorised distributors. Directories list Crown Micro Global and Crown Solar Energy as separate entries.",
+      "technology": "Varies by product; ask for each product's datasheet and who manufactures it.",
+      "pakistan": "Local brand with a dealer network.",
+      "verify": {
+        "label": "Crown Solar authenticity checker",
+        "url": "https://crownsolarenergy.com/authenticity-checker/"
+      },
+      "sources": [
+        "https://w11stop.com/crown-solar",
+        "https://crownsolarenergy.com/authenticity-checker/"
+      ]
+    },
+    {
+      "id": "inverex",
+      "name": "Inverex",
+      "aliases": [
+        "inverex solar",
+        "apt inverex",
+        "nitrox",
+        "veyron",
+        "inverex powerwall"
+      ],
+      "categories": [
+        "inverter",
+        "panel",
+        "battery_lithium"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan (Karachi)",
+      "about": "Karachi-based solar brand selling inverters (e.g. Nitrox hybrid series), panels and lithium batteries.",
+      "technology": "Hybrid and on-grid inverters; lithium battery packs. Ask who manufactures each product and for the datasheet.",
+      "pakistan": "Large local dealer network. Ask for the nearest authorised service centre and written warranty terms.",
+      "verify": {
+        "label": "Ask the authorised dealer for the warranty card and serial registration",
+        "url": null
+      },
+      "sources": [
+        "https://www.linkedin.com/company/inverex-solar-energy",
+        "https://inverexsolar.pk/"
+      ]
+    },
+    {
+      "id": "solis",
+      "name": "Solis (Ginlong)",
+      "aliases": [
+        "solis",
+        "ginlong",
+        "s5-gr",
+        "s6-gr",
+        "s6-eh"
+      ],
+      "categories": [
+        "inverter"
+      ],
+      "kind": "international",
+      "origin": "China (Ningbo)",
+      "about": "Inverter brand of Ginlong Technologies; on-grid (S5/S6-GR) and hybrid (S6-EH) ranges.",
+      "technology": "String on-grid and hybrid inverters; check the hybrid model's battery voltage class and approved batteries.",
+      "pakistan": "Sold in Pakistan through distributors.",
+      "verify": null,
+      "sources": [
+        "https://earthenergylog.com/articles/hybrid-inverters-residential-2026"
+      ]
+    },
+    {
+      "id": "growatt",
+      "name": "Growatt",
+      "aliases": [
+        "growatt",
+        "spf",
+        "sph",
+        "min tl",
+        "mod tl"
+      ],
+      "categories": [
+        "inverter",
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China (Shenzhen, started 2011)",
+      "about": "Residential and commercial inverters, plus batteries. Off-grid SPF series, hybrid SPH series, on-grid MIN/MOD series.",
+      "technology": "Off-grid, hybrid and on-grid inverters; own battery ranges.",
+      "pakistan": "Widely available in Pakistan.",
+      "verify": null,
+      "sources": [
+        "https://www.srnesolar.com/articledetail/top-10-solar-inverter-manufacturers-in-the-world-2026.html",
+        "https://www.ktechsolar.com/best-residential-hybrid-inverter-brands-in-2026-for-installers/"
+      ]
+    },
+    {
+      "id": "huawei",
+      "name": "Huawei (FusionSolar)",
+      "aliases": [
+        "huawei",
+        "sun2000",
+        "luna2000",
+        "fusionsolar"
+      ],
+      "categories": [
+        "inverter",
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China (Shenzhen)",
+      "about": "SUN2000 inverters and LUNA2000 batteries with the FusionSolar monitoring app.",
+      "technology": "Residential storage pairs SUN2000 hybrid inverters with LUNA2000 batteries in one ecosystem; check which batteries are supported if you plan a different brand.",
+      "pakistan": "Sold in Pakistan, often in larger and commercial systems.",
+      "verify": null,
+      "sources": [
+        "https://earthenergylog.com/articles/hybrid-inverters-residential-2026"
+      ]
+    },
+    {
+      "id": "sungrow",
+      "name": "Sungrow",
+      "aliases": [
+        "sungrow",
+        "sh series",
+        "sg series"
+      ],
+      "categories": [
+        "inverter",
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China (Hefei, founded 1997)",
+      "about": "One of the world's largest inverter suppliers; residential SH hybrid series (about 3-25 kW) and SG on-grid series.",
+      "technology": "On-grid, hybrid and utility inverters; storage systems.",
+      "pakistan": "Present in Pakistan, particularly in larger installations.",
+      "verify": null,
+      "sources": [
+        "https://www.srnesolar.com/articledetail/top-10-solar-inverter-manufacturers-in-the-world-2026.html",
+        "https://www.marssolartech.com/top-solar-inverter-manufacturers/"
+      ]
+    },
+    {
+      "id": "deye",
+      "name": "Deye",
+      "aliases": [
+        "deye",
+        "sun-6k",
+        "sun-5k",
+        "sun-8k",
+        "sun-12k",
+        "sg04lp",
+        "sg05lp"
+      ],
+      "categories": [
+        "inverter"
+      ],
+      "kind": "international",
+      "origin": "China (Ningbo)",
+      "about": "Known for hybrid inverters; SUN series single-phase (about 3-12 kW) and three-phase (about 6-30 kW). Model codes like SUN-6K-SG04LP1.",
+      "technology": "Low-voltage (48 V) and high-voltage hybrid ranges. Deye publishes an approved-battery list (latest seen: DY-LV48-0132, 19 Oct 2026) naming batteries such as Pylontech and Dyness, with the protocol (CAN or RS485) and the setup number to choose on the inverter.",
+      "pakistan": "Widely used in Pakistani hybrid systems.",
+      "verify": {
+        "label": "Deye approved battery list (low-voltage, Oct 2026)",
+        "url": "https://www.deyeinverter.com/deyeinverter/2026/10/19/DeyeApprovedBatterylistDY-LV48-0132.pdf"
+      },
+      "sources": [
+        "https://www.deyeinverter.com/deyeinverter/2026/10/19/DeyeApprovedBatterylistDY-LV48-0132.pdf"
+      ]
+    },
+    {
+      "id": "knox",
+      "name": "Knox",
+      "aliases": [
+        "knox",
+        "knox pv",
+        "krypton",
+        "zynex"
+      ],
+      "categories": [
+        "inverter",
+        "battery_lithium"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan (Faisalabad)",
+      "about": "Brand of Electro Industries, founded March 2020; first product the KNOX 5G on-grid inverter (Feb 2021). Krypton and Zynex inverter lines; also sells lithium batteries.",
+      "technology": "On-grid and hybrid inverters, lithium batteries. Ask who manufactures each product and for the datasheet.",
+      "pakistan": "Company lists Knox Care Centres in Faisalabad, Islamabad and Lahore. Warranty claims about 10 years come from resellers; get the terms in writing.",
+      "verify": null,
+      "sources": [
+        "https://knoxpv.com/about",
+        "https://knox.com.pk/"
+      ]
+    },
+    {
+      "id": "goodwe",
+      "name": "GoodWe",
+      "aliases": [
+        "goodwe",
+        "et series",
+        "es series"
+      ],
+      "categories": [
+        "inverter",
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China (Suzhou)",
+      "about": "Listed inverter maker with hybrid and on-grid ranges, single- and three-phase, plus batteries.",
+      "technology": "Hybrid inverters with LFP battery support; check the approved-battery list for your model.",
+      "pakistan": "Sold in Pakistan through distributors.",
+      "verify": null,
+      "sources": [
+        "https://www.marssolartech.com/top-solar-inverter-manufacturers/"
+      ]
+    },
+    {
+      "id": "fox-ess",
+      "name": "Fox ESS",
+      "aliases": [
+        "foxess",
+        "fox ess",
+        "fox"
+      ],
+      "categories": [
+        "inverter",
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China (production base in Wenzhou; European HQ in Germany)",
+      "about": "Solar inverter and residential energy storage company.",
+      "technology": "Hybrid inverters and residential batteries.",
+      "pakistan": "Less common in Pakistan; check local service support.",
+      "verify": null,
+      "sources": [
+        "https://www.fox-ess.com/company"
+      ]
+    },
+    {
+      "id": "fronus",
+      "name": "Fronus",
+      "aliases": [
+        "fronus",
+        "fronus solar"
+      ],
+      "categories": [
+        "inverter",
+        "battery_lithium"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan (per retailers)",
+      "about": "Solar inverter brand sold across Punjab and Sindh, described by retailers as a local brand.",
+      "technology": "Hybrid inverters; ask who manufactures each product and for the datasheet.",
+      "pakistan": "Ask for the service network and written warranty.",
+      "verify": null,
+      "sources": [
+        "https://solarpricepakistan.com.pk/solar-panel-inverters/fronus-inverter-price-pakistan/"
+      ]
+    },
+    {
+      "id": "itel",
+      "name": "ITEL Energy",
+      "aliases": [
+        "itel",
+        "itel energy"
+      ],
+      "categories": [
+        "battery_lithium",
+        "inverter"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Not confirmed",
+      "about": "Sells lithium batteries (e.g. 12 V 100 Ah) and hybrid inverters in Pakistan.",
+      "technology": "Ask who makes the cells and the BMS, and for datasheets.",
+      "pakistan": "Growing retail presence.",
+      "verify": null,
+      "sources": [
+        "https://w11stop.com/hybrid-inverter"
+      ]
+    },
+    {
+      "id": "ziewnic",
+      "name": "Ziewnic",
+      "aliases": [
+        "ziewnic",
+        "ziewnic pk"
+      ],
+      "categories": [
+        "inverter",
+        "battery_lithium"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan (Ziewnic PK (Pvt) Ltd)",
+      "about": "Sells inverters (e.g. Z5 PV series) and residential lithium batteries.",
+      "technology": "Ask who manufactures each product and for the datasheet.",
+      "pakistan": "Local brand; ask for the service network and written warranty.",
+      "verify": null,
+      "sources": [
+        "https://w11stop.com/solar-inverters"
+      ]
+    },
+    {
+      "id": "pylontech",
+      "name": "Pylontech",
+      "aliases": [
+        "pylontech",
+        "pylon",
+        "us2000",
+        "us3000",
+        "us5000",
+        "force l1",
+        "force l2",
+        "force h1",
+        "force h2"
+      ],
+      "categories": [
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China (Shanghai)",
+      "about": "Lithium iron phosphate (LFP) battery maker; modular rack batteries for homes (US2000/US3000/US5000, Force L low-voltage; Force H high-voltage).",
+      "technology": "LFP, stackable 48 V modules with CAN/RS485 communication. Pylontech publishes an inverter compatibility list; some inverters need a minimum battery firmware (e.g. for Deye).",
+      "pakistan": "Widely used in Pakistani hybrid systems.",
+      "verify": {
+        "label": "Check your inverter's approved-battery list (e.g. Deye's) and Pylontech's compatibility list",
+        "url": "https://www.deyeinverter.com/deyeinverter/2026/10/19/DeyeApprovedBatterylistDY-LV48-0132.pdf"
+      },
+      "sources": [
+        "https://lithiumbattery.online/byd-vs-pylontech-vs-dyness/",
+        "https://www.deyeinverter.com/deyeinverter/2026/10/19/DeyeApprovedBatterylistDY-LV48-0132.pdf"
+      ]
+    },
+    {
+      "id": "dyness",
+      "name": "Dyness",
+      "aliases": [
+        "dyness",
+        "powerbox",
+        "b4850",
+        "a48100"
+      ],
+      "categories": [
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China",
+      "about": "Residential and commercial LFP storage; stackable low-voltage batteries.",
+      "technology": "LFP, 48 V stackable modules; appears on Deye's approved battery list. Dyness publishes its own compatible-inverter list.",
+      "pakistan": "Sold in Pakistan; reviewers note a thinner service network than larger brands, so confirm local support.",
+      "verify": {
+        "label": "Dyness compatible inverter list (Jul 2026)",
+        "url": "https://www.inverter-warehouse.co.za/cdn/shop/files/Dyness_-_Compatible_Inverter_List_20260715.pdf"
+      },
+      "sources": [
+        "https://www.fotovol.ro/en/help/dyness-batteries",
+        "https://www.deyeinverter.com/deyeinverter/2026/10/19/DeyeApprovedBatterylistDY-LV48-0132.pdf"
+      ]
+    },
+    {
+      "id": "byd",
+      "name": "BYD",
+      "aliases": [
+        "byd",
+        "battery-box",
+        "battery box"
+      ],
+      "categories": [
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China (Shenzhen)",
+      "about": "Major global battery and vehicle maker; Battery-Box residential storage.",
+      "technology": "Cobalt-free LFP, modular; more common in high-voltage hybrid systems. Check your inverter supports BYD's high-voltage range.",
+      "pakistan": "Less common in typical 48 V Pakistani home systems; check inverter compatibility first.",
+      "verify": null,
+      "sources": [
+        "https://lithiumbattery.online/byd-vs-pylontech-vs-dyness/"
+      ]
+    },
+    {
+      "id": "narada",
+      "name": "Narada",
+      "aliases": [
+        "narada",
+        "narada power"
+      ],
+      "categories": [
+        "battery_lithium",
+        "battery_lead_acid"
+      ],
+      "kind": "international",
+      "origin": "China",
+      "about": "Long-established industrial battery maker (telecom, data centres, energy storage), with low-voltage lithium products.",
+      "technology": "Lead-acid and lithium industrial batteries; check the specific home-storage model and inverter compatibility.",
+      "pakistan": "Present mainly in telecom and industrial supply.",
+      "verify": null,
+      "sources": [
+        "https://lithiumbattery.online/byd-vs-pylontech-vs-dyness/"
+      ]
+    },
+    {
+      "id": "felicity",
+      "name": "Felicity Solar",
+      "aliases": [
+        "felicity",
+        "felicitysolar",
+        "fla48"
+      ],
+      "categories": [
+        "battery_lithium",
+        "inverter"
+      ],
+      "kind": "international",
+      "origin": "China",
+      "about": "Sells wall-mounted and rack-mounted lithium batteries and inverters.",
+      "technology": "LFP batteries; Felicity publishes compatibility lists for its battery models (e.g. FLA48171).",
+      "pakistan": "Sold in Pakistan through distributors; confirm local warranty support.",
+      "verify": null,
+      "sources": [
+        "https://solarbex.com/wp-content/uploads/2026/05/FLA48171-EU-Lista-Compatibilidad.pdf"
+      ]
+    },
+    {
+      "id": "sunwoda",
+      "name": "Sunwoda",
+      "aliases": [
+        "sunwoda"
+      ],
+      "categories": [
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China (Shenzhen)",
+      "about": "Large battery maker; its energy-storage arm makes mostly commercial and utility-scale systems.",
+      "technology": "LFP cells and storage systems.",
+      "pakistan": "Rare as a consumer brand; may appear as the cell maker inside other brands' packs.",
+      "verify": null,
+      "sources": [
+        "https://en.wikipedia.org/wiki/Sunwoda",
+        "https://www.sunwodaenergy.com/"
+      ]
+    },
+    {
+      "id": "hithium",
+      "name": "Hithium",
+      "aliases": [
+        "hithium"
+      ],
+      "categories": [
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China (Xiamen)",
+      "about": "Energy-storage cell and system maker, mainly utility-scale (e.g. 314 Ah LFP cells, 5 MWh containers).",
+      "technology": "Large-format LFP cells.",
+      "pakistan": "Mainly industrial; may appear as the cell maker inside other brands' packs.",
+      "verify": null,
+      "sources": [
+        "https://www.energy-storage.news/re-energy-storage-product-announcements-from-hithium-sunwoda-power-edison-and-more/"
+      ]
+    },
+    {
+      "id": "sacred-sun",
+      "name": "Sacred Sun (Shuangdeng)",
+      "aliases": [
+        "sacred sun",
+        "shuangdeng"
+      ],
+      "categories": [
+        "battery_lithium",
+        "battery_lead_acid"
+      ],
+      "kind": "international",
+      "origin": "China (Shuangdeng Group)",
+      "about": "Industrial battery maker (telecom, data centres, storage), lead-acid and lithium.",
+      "technology": "Industrial lead-acid and LFP systems.",
+      "pakistan": "Mainly industrial and telecom supply. Limited public information on home products.",
+      "verify": null,
+      "sources": [
+        "https://en.cnesa.org/latest-news"
+      ]
+    },
+    {
+      "id": "leoch",
+      "name": "Leoch",
+      "aliases": [
+        "leoch"
+      ],
+      "categories": [
+        "battery_lead_acid",
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "China",
+      "about": "Battery maker with lead-acid and lithium ranges for UPS, telecom and storage.",
+      "technology": "Lead-acid (AGM/gel) and lithium; check the exact model's datasheet.",
+      "pakistan": "Limited public information on Pakistani distribution.",
+      "verify": null,
+      "sources": []
+    },
+    {
+      "id": "soluna",
+      "name": "Soluna",
+      "aliases": [
+        "soluna"
+      ],
+      "categories": [
+        "battery_lithium"
+      ],
+      "kind": "international",
+      "origin": "Not confirmed",
+      "about": "Lithium battery brand seen in some markets. Roshni could not confirm its manufacturer or origin from public sources.",
+      "technology": "Ask for the cell maker, BMS maker and full datasheet.",
+      "pakistan": "Limited public information. Be extra careful with warranty and inverter compatibility.",
+      "verify": null,
+      "sources": []
+    },
+    {
+      "id": "ags",
+      "name": "AGS (Atlas Battery)",
+      "aliases": [
+        "ags",
+        "atlas battery",
+        "atlas"
+      ],
+      "categories": [
+        "battery_lead_acid"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan (Karachi; Atlas Group)",
+      "about": "Made by Atlas Battery Limited, founded 1966; automotive, motorcycle, UPS and tubular batteries.",
+      "technology": "Lead-acid, including tubular deep-cycle batteries for UPS and solar backup.",
+      "pakistan": "Major market player with wide dealer network.",
+      "verify": null,
+      "sources": [
+        "https://www.kenresearch.com/pakistan-battery-market"
+      ]
+    },
+    {
+      "id": "exide",
+      "name": "Exide Pakistan",
+      "aliases": [
+        "exide"
+      ],
+      "categories": [
+        "battery_lead_acid"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan (Karachi; Exide Pakistan Limited, since 1953)",
+      "about": "Automotive, motorcycle, industrial and solar lead-acid batteries; began domestic car-battery production in 1953.",
+      "technology": "Lead-acid, including tubular and UPS ranges.",
+      "pakistan": "Long-established local manufacturer.",
+      "verify": null,
+      "sources": [
+        "https://www.kenresearch.com/pakistan-battery-market"
+      ]
+    },
+    {
+      "id": "osaka",
+      "name": "Osaka",
+      "aliases": [
+        "osaka"
+      ],
+      "categories": [
+        "battery_lead_acid"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan",
+      "about": "Popular in UPS, tubular and automotive batteries. Roshni could not confirm the parent company from public sources.",
+      "technology": "Lead-acid, including tubular deep-cycle.",
+      "pakistan": "Widely sold.",
+      "verify": null,
+      "sources": [
+        "https://www.mordorintelligence.com/industry-reports/pakistan-battery-market/companies"
+      ]
+    },
+    {
+      "id": "volta",
+      "name": "Volta",
+      "aliases": [
+        "volta"
+      ],
+      "categories": [
+        "battery_lead_acid"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan",
+      "about": "Established lead-acid battery name; market reports list Volta & Osaka Batteries among competitors.",
+      "technology": "Lead-acid automotive and UPS batteries.",
+      "pakistan": "Widely sold.",
+      "verify": null,
+      "sources": [
+        "https://www.mordorintelligence.com/industry-reports/pakistan-battery-market/companies"
+      ]
+    },
+    {
+      "id": "phoenix",
+      "name": "Phoenix Battery",
+      "aliases": [
+        "phoenix",
+        "phoenix tx"
+      ],
+      "categories": [
+        "battery_lead_acid"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan (Century Engineering Industries, per market reports)",
+      "about": "Automotive, deep-cycle, UPS and solar batteries, including the TX tubular range.",
+      "technology": "Lead-acid tubular and UPS batteries.",
+      "pakistan": "Widely sold.",
+      "verify": null,
+      "sources": [
+        "https://www.kenresearch.com/pakistan-battery-market"
+      ]
+    },
+    {
+      "id": "daewoo",
+      "name": "Daewoo Battery",
+      "aliases": [
+        "daewoo",
+        "treet battery"
+      ],
+      "categories": [
+        "battery_lead_acid"
+      ],
+      "kind": "pakistan-market",
+      "origin": "Pakistan (Faisalabad; a brand of Treet Battery)",
+      "about": "Made locally in Faisalabad using Korean technology, per the company; sealed / maintenance-free and other lead-acid batteries.",
+      "technology": "Lead-acid, including maintenance-free.",
+      "pakistan": "Local manufacturer.",
+      "verify": null,
+      "sources": [
+        "https://daewoobattery.com/blogs/resources/best-battery-brand-in-pakistan"
+      ]
+    }
+  ]
+}

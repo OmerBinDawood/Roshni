@@ -14,6 +14,7 @@ export default function Home() {
     { href: "/health", icon: "🩺", title: "Already have solar?", desc: "Check if your system makes as many units as it should, and which settings to check." },
     { href: "/financing", icon: "🏦", title: "Loan vs savings", desc: "Will the bank instalment be more than what solar saves you?" },
     { href: "/learn", icon: "⚡", title: t("learn"), desc: t("learnD") },
+    { href: "/brands", icon: "🏷️", title: "Brand guide", desc: "Who makes each panel, inverter and battery brand in Pakistan, how to verify it, and what to check." },
     { href: "/guides", icon: "📋", title: "Guides", desc: "Net-billing paperwork, checking panels are genuine, and safety basics." },
   ];
   return (

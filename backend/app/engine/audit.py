@@ -10,6 +10,7 @@ from .dispatch import dispatch, monthly, outage_mask
 from .finance import annual_bill, cashflow, make_tariff, select_regime
 from .load import build_load, scale_to_bill
 from .pv import simulate_pv, site_temperatures
+from .brands import brand_notes
 from .rules import backup_loads, run_rules
 
 SEV_ORDER = {"CRITICAL": 0, "CLARIFY": 1, "INFO": 2, "OK": 3}
@@ -157,6 +158,7 @@ def run_audit(req: AuditRequest) -> dict:
                    "hours_on_battery": round(usable / max(bl["running_kw"], 0.01), 1) if usable else 0,
                    "works_in_outage": inv_type != "on_grid",
                    "items": backup_items(req, inv_type, usable, batt_kw)},
+        "brands": brand_notes(req.quote.line_items),
         "site": site, "reconciliation": recon, "reconciliation_prompts": reconciliation_prompts(recon),
         "clipped_kwh": round(clipped),
         "assumptions": assumptions,

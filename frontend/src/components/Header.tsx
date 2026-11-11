@@ -17,6 +17,7 @@ export default function Header() {
           <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/audit">Audit</Link>
           <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/bill">Bill</Link>
           <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/battery">Battery</Link>
+          <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/brands">Brands</Link>
           <Link className="hidden sm:inline px-2 py-1 rounded hover:bg-bg" href="/learn">Learn</Link>
           <Link className="px-2 py-1 rounded hover:bg-bg whitespace-nowrap" href="/account">{session ? "My reports" : "Sign in"}</Link>
           <button

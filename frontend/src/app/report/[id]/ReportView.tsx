@@ -174,6 +174,29 @@ export default function ReportView() {
         </Card>
       )}
 
+      {rep.brands?.length > 0 && (
+        <Card>
+          <h2 className="font-semibold">About the brands in this {parts ? "parts list" : "quote"}</h2>
+          <p className="text-sm text-muted">Roshni does not rank brands. A known name does not protect you from fake or B-grade stock: verify the exact items you receive.</p>
+          <div className="mt-3 space-y-3">
+            {rep.brands.map((n: any, i: number) => (
+              <div key={i} className="rounded-xl bg-bg p-3 text-sm space-y-1">
+                <div className="font-medium">{n.category_label}: {n.brand ? <a className="underline" href={`/brands#${n.brand.id}`}>{n.brand.name}</a> : (n.brand_text || "brand not stated")}
+                  {n.brand && <span className="text-muted"> · {n.brand.origin}</span>}</div>
+                {n.brand ? <p>{n.brand.about}</p> : <p className="text-warn">Roshni has no profile for this brand. Ask the seller who manufactures it, for the datasheet, and who honours the warranty in Pakistan.</p>}
+                {n.brand?.verify && (
+                  <p className="text-leaf">✔ {n.brand.verify.url ? <a className="underline" href={n.brand.verify.url} target="_blank" rel="noreferrer">{n.brand.verify.label}</a> : n.brand.verify.label}</p>
+                )}
+                <details>
+                  <summary className="cursor-pointer text-muted">What to check before you pay</summary>
+                  <ul className="mt-1 space-y-1">{n.checks.map((c: string) => <li key={c}>☐ {c}</li>)}</ul>
+                </details>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card>
         <h2 className="font-semibold">In load-shedding</h2>
         <p className="text-sm text-muted">{rep.backup.outage_hours_per_day} h/day outages · backup load ~{rep.backup.running_kw} kW{rep.backup.battery_usable_kwh ? ` · ${rep.backup.battery_usable_kwh} kWh usable battery` : ""}</p>
