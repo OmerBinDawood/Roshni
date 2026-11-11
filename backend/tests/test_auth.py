@@ -61,9 +61,14 @@ def test_claim_anonymous_report_requires_creator_token():
     assert acc["owned_by_you"] and acc["can_manage"]
 
 
+def test_clock_skew_tolerated_just_after_sign_in():
+    # a token that expired a few seconds ago on our clock (skew) is still accepted
+    assert c.get("/api/me/reports", headers=H(token(exp=-10))).status_code == 200
+
+
 def test_bad_tokens_rejected():
     assert c.get("/api/me/reports").status_code == 401
-    assert c.get("/api/me/reports", headers=H(token(exp=-10))).status_code == 401
+    assert c.get("/api/me/reports", headers=H(token(exp=-300))).status_code == 401
     assert c.get("/api/me/reports", headers=H(token(aud="anon"))).status_code == 401
     other_key = ec.generate_private_key(ec.SECP256R1())
     assert c.get("/api/me/reports", headers=H(token(key=other_key))).status_code == 401

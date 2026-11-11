@@ -24,7 +24,7 @@ def verify(token: str) -> dict:
     try:
         key = client.get_signing_key_from_jwt(token)
         return jwt.decode(token, key.key, algorithms=["ES256", "RS256", "EdDSA"], audience="authenticated",
-                          options={"require": ["exp", "sub"]})
+                          leeway=60, options={"require": ["exp", "sub"]})  # leeway: clock skew right after sign-in
     except jwt.PyJWTError as e:
         raise HTTPException(401, f"Your session is invalid or expired. Please sign in again. ({type(e).__name__})")
 
