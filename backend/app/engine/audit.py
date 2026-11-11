@@ -100,7 +100,12 @@ def run_audit(req: AuditRequest) -> dict:
     parts = req.mode == "parts"
     fin = None if parts else financials(p, req.bill, idx, pv, load, outage, inverter_type=inv_type, usable_kwh=usable, batt_kw=batt_kw)
     site = site_temperatures(p.city)
-    ctx = {"site": site, "mode": req.mode,
+    orientation_loss = 0.0
+    if dc_kw > 0 and (abs(s.azimuth - 180) > 30 or s.tilt > 35 or s.tilt < 5):
+        best = simulate_pv(p.city, dc_kw, s.inverter.rated_kw, 20, 180)["pv_kw"].sum()
+        orientation_loss = max(0.0, 1 - float(np.sum(pv)) / best) if best else 0.0
+    ctx = {"site": site, "mode": req.mode, "orientation_loss": orientation_loss,
+           "tilt": s.tilt, "azimuth": s.azimuth,
            "regime": fin["regime"] if fin else None,
            "savings_monthly": fin["savings_monthly"] if fin else None,
            "export_share": fin["export_share"] if fin else 0.0}

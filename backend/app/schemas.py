@@ -96,38 +96,38 @@ class BatterySpec(BaseModel):
 
 class SystemConfig(BaseModel):
     """Confirmed technical configuration derived from the quote + specs."""
-    panel_count: int = 0
+    panel_count: int = Field(0, ge=0, le=2000)
     panel: PanelSpec = Field(default_factory=PanelSpec)
-    panels_per_string: Optional[int] = None
-    strings_per_mppt: Optional[int] = None
+    panels_per_string: Optional[int] = Field(None, ge=1, le=60)
+    strings_per_mppt: Optional[int] = Field(None, ge=1, le=10)
     inverter: InverterSpec = Field(default_factory=InverterSpec)
-    battery_count: int = 0
+    battery_count: int = Field(0, ge=0, le=100)
     battery: BatterySpec = Field(default_factory=BatterySpec)
-    tilt: float = 20.0
-    azimuth: float = 180.0
+    tilt: float = Field(20.0, ge=0, le=90)
+    azimuth: float = Field(180.0, ge=0, le=360)
 
 
 class AC(BaseModel):
-    count: int = 1
-    tons: float = 1.5
+    count: int = Field(1, ge=0, le=30)
+    tons: float = Field(1.5, gt=0, le=10)
     inverter: bool = True
-    day_hours: float = 6
-    night_hours: float = 6
+    day_hours: float = Field(6, ge=0, le=12)
+    night_hours: float = Field(6, ge=0, le=12)
 
 
 class Profile(BaseModel):
     city: str = "Lahore"
     acs: list[AC] = Field(default_factory=list)
-    motor_hp: float = 1.0
-    fridges: int = 1
-    fans: int = 6
-    lights: int = 10
-    backup_fans: int = 3
-    backup_lights: int = 5
+    motor_hp: float = Field(1.0, ge=0, le=20)
+    fridges: int = Field(1, ge=0, le=20)
+    fans: int = Field(6, ge=0, le=100)
+    lights: int = Field(10, ge=0, le=300)
+    backup_fans: int = Field(3, ge=0, le=100)
+    backup_lights: int = Field(5, ge=0, le=300)
     backup_fridge: bool = True
-    backup_ac: int = 0
+    backup_ac: int = Field(0, ge=0, le=30)
     backup_motor: bool = False
-    outage_hours_per_day: float = 4
+    outage_hours_per_day: float = Field(4, ge=0, le=24)
     goal: Literal["bill", "backup", "both"] = "both"
     wants_backup: bool = True
     net_metering_agreement_date: Optional[str] = None  # ISO date, None = no agreement

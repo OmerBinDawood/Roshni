@@ -10,7 +10,11 @@ export default function Home() {
     { href: "/battery", icon: "🔋", title: t("battery"), desc: t("batteryD") },
     { href: "/audit?mode=parts", icon: "🧰", title: "Buying parts yourself?", desc: "Check that panels, inverter and battery work together safely before you buy." },
     { href: "/readiness", icon: "🏠", title: "Is solar right for me yet?", desc: "A 2-minute check that can honestly say “not now”." },
+    { href: "/compare", icon: "⚖️", title: "Compare quotes", desc: "Put 2-4 checked quotes side by side: price per watt, battery value, savings and issues." },
+    { href: "/health", icon: "🩺", title: "Already have solar?", desc: "Check if your system makes as many units as it should, and which settings to check." },
+    { href: "/financing", icon: "🏦", title: "Loan vs savings", desc: "Will the bank instalment be more than what solar saves you?" },
     { href: "/learn", icon: "⚡", title: t("learn"), desc: t("learnD") },
+    { href: "/guides", icon: "📋", title: "Guides", desc: "Net-billing paperwork, checking panels are genuine, and safety basics." },
   ];
   return (
     <div className="space-y-8">

@@ -1,13 +1,13 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import BillLookup from "@/components/BillLookup";
 import FilePick from "@/components/FilePick";
 import ProfileForm from "@/components/ProfileForm";
 import { Button, Card, Consent, ErrorBox, Issues, Num } from "@/components/ui";
 import { api, defaultProfile, ITEM_TYPES, rs, type Bill, type Issue, type LineItem, type Profile, type Quote, type Spec, type SystemConfig } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
-import { ownerToken } from "@/lib/supabase";
+import { deviceReports, ownerToken } from "@/lib/supabase";
 
 type Match = { kind: string; brand: string; model: string; match: number; verified: boolean };
 
@@ -71,14 +71,21 @@ export default function AuditPage() {
 
   async function submit() {
     const r = await run("Simulating a full year, hour by hour…", () =>
-      api.post<{ id: string; owner_token: string }>("/audit", { quote, system, profile, bill: mode === "parts" ? null : bill, mode }));
-    if (r) { ownerToken.set(r.id, r.owner_token); router.push(`/report/${r.id}`); }
+      api.post<{ id: string; owner_token: string; report: { system_summary: { dc_kwp: number } } }>("/audit", { quote, system, profile, bill: mode === "parts" ? null : bill, mode }));
+    if (r) {
+      ownerToken.set(r.id, r.owner_token);
+      deviceReports.add({ id: r.id, created: new Date().toISOString(),
+        title: `${quote?.installer_name || (mode === "parts" ? "Parts list" : "Quote")} · ${r.report.system_summary.dc_kwp} kWp` });
+      const other = params.get("compare");
+      router.push(other ? `/compare?ids=${other},${r.id}` : `/report/${r.id}`);
+    }
   }
 
   const canRead = consent && (quoteFiles.length > 0 || quoteText.trim().length > 0);
   return (
     <div className="space-y-5">
       <h1 className="text-2xl font-bold">{mode === "parts" ? "Parts-list safety check" : t("checkQuote")}</h1>
+      {params.get("compare") && <p className="rounded-xl bg-info/10 text-info px-3 py-2 text-sm">After this check you&apos;ll see it side by side with your earlier quote.</p>}
       {step === 0 && (
         <div className="flex gap-2 text-sm" role="radiogroup" aria-label="What do you have?">
           <button onClick={() => setMode("full")} className={`flex-1 rounded-xl border p-3 text-start ${mode === "full" ? "bg-sun/15 border-sun" : "border-line"}`}>
@@ -105,8 +112,8 @@ export default function AuditPage() {
           <FilePick files={quoteFiles} onChange={setQuoteFiles}
             label={mode === "parts" ? "Photos of the parts, receipts or your parts list" : "Upload your installer's quote"} />
           <div>
-            <label>{mode === "parts" ? "…or type/paste your parts list" : "…or paste the quote text (e.g. a copied chat message or email)"}</label>
-            <textarea dir="auto" rows={5} value={quoteText} onChange={(e) => setQuoteText(e.target.value)}
+            <label htmlFor="quote-text">{mode === "parts" ? "…or type/paste your parts list" : "…or paste the quote text (e.g. a copied chat message or email)"}</label>
+            <textarea id="quote-text" dir="auto" rows={5} value={quoteText} onChange={(e) => setQuoteText(e.target.value)}
               placeholder={mode === "parts"
                 ? "12 x Jinko 580W\nGrowatt SPF 6000 ES Plus\n2 x Pylontech US5000"
                 : "10 x LONGi 585W A grade @ 23,400\n6kW Deye hybrid inverter 3.3 lakh\n5kWh lithium battery 2.8 lakh\nStructure, wiring, installation 85k"} />
@@ -280,6 +287,14 @@ function SystemEditor({ system, onChange, quote }: { system: SystemConfig; onCha
         <Num label="Panels per string" value={system.panels_per_string} onChange={(v) => onChange({ ...system, panels_per_string: v })} />
         <Num label="Strings per MPPT" value={system.strings_per_mppt} onChange={(v) => onChange({ ...system, strings_per_mppt: v })} />
         <Num label="Number of batteries" value={system.battery_count} onChange={(v) => onChange({ ...system, battery_count: v ?? 0 })} />
+        <div>
+          <label htmlFor="facing">Panels will face</label>
+          <select id="facing" value={String(system.azimuth)} onChange={(e) => onChange({ ...system, azimuth: Number(e.target.value) })}>
+            <option value="180">South (best)</option><option value="135">South-east</option><option value="225">South-west</option>
+            <option value="90">East</option><option value="270">West</option><option value="0">North</option>
+          </select>
+        </div>
+        <Num label="Tilt (degrees)" value={system.tilt} onChange={(v) => onChange({ ...system, tilt: v ?? 20 })} />
       </div>
       {kinds.map((kind) => (
         <div key={kind} className="rounded-xl bg-bg p-3 space-y-2">
@@ -318,9 +333,10 @@ function SystemEditor({ system, onChange, quote }: { system: SystemConfig; onCha
 }
 
 function Sel({ label, v, opts, on }: { label: string; v: unknown; opts: string[]; on: (v: string) => void }) {
+  const id = useId();
   return (
-    <div><label>{label}</label>
-      <select value={String(v ?? "")} onChange={(e) => on(e.target.value)}>
+    <div><label htmlFor={id}>{label}</label>
+      <select id={id} value={String(v ?? "")} onChange={(e) => on(e.target.value)}>
         {opts.map((o) => <option key={o} value={o}>{o ? o.replace("_", "-") : "unknown"}</option>)}
       </select>
     </div>

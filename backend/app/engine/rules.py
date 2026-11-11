@@ -72,6 +72,10 @@ def run_rules(req: AuditRequest, ctx: dict) -> list[Finding]:
         else:
             out.append(_f("R02", "OK", "Array size within inverter PV limit",
                           f"{dc_kw:.2f} kWp <= {inv.max_pv_input_kw} kW"))
+    elif s.panel_count <= 0:
+        out.append(_f("R02", "CLARIFY", "Number of panels not stated",
+                      "The quote does not say how many panels are included, so the array size cannot be checked.",
+                      question="How many panels, of which exact model, are included?"))
     else:
         out.append(_cannot_verify("R02", "array size vs inverter limit",
                                   [n for n, v in (("panel Pmax", pan.pmax_w), ("inverter max PV input", inv.max_pv_input_kw)) if not v],
@@ -124,6 +128,14 @@ def run_rules(req: AuditRequest, ctx: dict) -> list[Finding]:
         else:
             out.append(_f("R05", "OK", "MPPT current within limit", f"{i:.1f} A <= {inv.max_isc_per_mppt_a} A"))
 
+    # R26 panel orientation (Roshni addition): roof direction and tilt change yearly output
+    if ctx.get("orientation_loss", 0) >= 0.08:
+        loss = ctx["orientation_loss"] * 100
+        out.append(_f("R26", "CLARIFY" if loss >= 20 else "INFO", f"Panel direction costs about {loss:.0f}% of output",
+                      f"Panels facing {ctx['azimuth']:.0f} degrees (180 = south) at {ctx['tilt']:.0f} degrees tilt make about {loss:.0f}% "
+                      "fewer units a year than south-facing panels at about 20 degrees. A raised structure can often fix this.",
+                      question="Can the structure face the panels south at about 20 degrees?"))
+
     # R25 on-grid quote but user wants backup
     if inv.type == "on_grid" and p.wants_backup:
         out.append(_f("R25", "CRITICAL", "This system will not work during load-shedding",
@@ -155,6 +167,9 @@ def run_rules(req: AuditRequest, ctx: dict) -> list[Finding]:
                               f"Your backup appliances need about {bl['running_kw']} kW together; the battery can deliver {total:.1f} kW.",
                               question=f"Can this battery supply {bl['running_kw']} kW continuously?"))
         usable = (bat.usable_kwh or (bat.nominal_kwh or 0) * 0.9) * max(1, s.battery_count)
+        if not usable:
+            out.append(_cannot_verify("R09", "battery backup hours", ["battery capacity (kWh)"],
+                                      "What is the usable capacity (kWh) of the battery, and how many hours will it run my backup loads?"))
         if usable:
             need = bl["running_kw"] * p.outage_hours_per_day
             hours = usable / bl["running_kw"] if bl["running_kw"] else 0

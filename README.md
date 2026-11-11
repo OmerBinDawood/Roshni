@@ -26,6 +26,10 @@ copy-paste list of questions for your installer.
 | Installer conversation kit (personal questions, checklist, red flags), outcome survey (north-star), report deletion | report |
 | Bill lookup by 14-digit reference number from the official PITC portal (all PITC DISCOs; K-Electric by photo). Never bypasses a CAPTCHA | `/bill`, audit bill step |
 | Optional sign-in (Supabase email code / magic link) to keep report history; anonymous creators keep a private ownership token | `/account` |
+| Compare 2-4 checked quotes on a normalised basis (Rs/W, Rs per usable battery kWh, savings, issues) | `/compare` |
+| Existing-system health check: actual vs expected monthly generation, likely causes, inverter settings checklist | `/health` |
+| Loan instalment vs savings (financing check) | `/financing` |
+| Guides: net-billing paperwork, genuine panels, safety basics | `/guides` |
 | "Should I add a battery?" advisor | `/battery` |
 | Solar readiness check ("not now" is a valid answer) | `/readiness` |
 | On-grid vs hybrid explainer, "which type fits me" quiz, backup simulator, 10 lessons with audio, glossary | `/learn` |
@@ -88,7 +92,9 @@ npm run dev                                       # http://localhost:3000
 
 Set `BACKEND_URL` for the frontend if the API is not on `http://127.0.0.1:8000`.
 
-Tests: `cd backend && .venv/Scripts/python -m pytest -q` (tests always use a throwaway SQLite database).
+Tests: `cd backend && .venv/Scripts/python -m pytest -q` (35 tests; always on a throwaway SQLite database). They cover the
+official slab tariff maths, every audit rule path, engine edge cases (long outages, expired agreements, odd bills, cold cities,
+orientation), API input limits, auth/ownership, the bill-portal client (mocked) and the extra journeys.
 
 For Supabase, use the **session pooler** connection string (IPv4), e.g.
 `postgresql://postgres.<project-ref>:<url-encoded-password>@aws-0-<region>.pooler.supabase.com:5432/postgres`.

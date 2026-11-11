@@ -19,7 +19,10 @@ def select_regime(profile: Profile) -> tuple[str, int | None]:
     d = profile.net_metering_agreement_date
     if d and d < reg["net_billing_start_date"]:
         y = int(d[:4]) + reg["regimes"]["LEGACY_NET_METERING"]["agreement_term_years"]
-        return "LEGACY_NET_METERING", y
+        if y > date.today().year or (y == date.today().year and d[5:] > date.today().isoformat()[5:]):
+            return "LEGACY_NET_METERING", y
+        # Agreement already expired: renewals are under the 2026 regulations (net billing)
+        return "NET_BILLING_2026", None
     return "NET_BILLING_2026", None
 
 

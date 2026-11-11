@@ -5,8 +5,9 @@ import pandas as pd
 from ..schemas import Profile
 from .data import appliances
 
-DAY_HOURS = list(range(10, 18))           # AC daytime window
-NIGHT_HOURS = [22, 23, 0, 1, 2, 3, 4, 5]  # AC night window
+# AC windows fill outward from the hottest / main sleeping hours, so any number of hours (0-12 each) fits
+DAY_HOURS = [13, 14, 12, 15, 11, 16, 10, 17, 9, 18, 8, 19]      # 12 daytime slots, hottest first
+NIGHT_HOURS = [23, 0, 1, 22, 2, 3, 21, 4, 5, 20, 6, 7]          # 12 night slots, main sleeping hours first
 EVENING = list(range(18, 24))
 
 

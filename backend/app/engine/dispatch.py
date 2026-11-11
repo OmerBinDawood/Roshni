@@ -2,7 +2,8 @@
 import numpy as np
 import pandas as pd
 
-OUTAGE_ORDER = [19, 20, 14, 15, 21, 9, 10, 22, 13, 16, 11, 12]  # typical load-shedding slots
+# Typical load-shedding slots in order of likelihood; covers all 24 hours so long rural outages are modelled
+OUTAGE_ORDER = [19, 20, 14, 15, 21, 9, 10, 22, 13, 16, 11, 12, 23, 0, 8, 17, 1, 2, 18, 3, 7, 4, 5, 6]
 
 
 def outage_mask(index: pd.DatetimeIndex, hours_per_day: float) -> np.ndarray:

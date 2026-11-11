@@ -1,14 +1,177 @@
 {
-  "Lahore": {"lat": 31.52, "lon": 74.36, "provider": "LESCO"},
-  "Karachi": {"lat": 24.86, "lon": 67.01, "provider": "K-Electric"},
-  "Islamabad": {"lat": 33.68, "lon": 73.05, "provider": "IESCO"},
-  "Rawalpindi": {"lat": 33.60, "lon": 73.04, "provider": "IESCO"},
-  "Faisalabad": {"lat": 31.42, "lon": 73.08, "provider": "FESCO"},
-  "Multan": {"lat": 30.20, "lon": 71.47, "provider": "MEPCO"},
-  "Peshawar": {"lat": 34.01, "lon": 71.58, "provider": "PESCO"},
-  "Quetta": {"lat": 30.18, "lon": 66.98, "provider": "QESCO"},
-  "Hyderabad": {"lat": 25.40, "lon": 68.37, "provider": "HESCO"},
-  "Gujranwala": {"lat": 32.16, "lon": 74.19, "provider": "GEPCO"},
-  "Sialkot": {"lat": 32.49, "lon": 74.53, "provider": "GEPCO"},
-  "Sukkur": {"lat": 27.70, "lon": 68.86, "provider": "SEPCO"}
+  "Abbottabad": {
+    "lat": 34.15,
+    "lon": 73.21,
+    "provider": "PESCO"
+  },
+  "Bahawalpur": {
+    "lat": 29.4,
+    "lon": 71.68,
+    "provider": "MEPCO"
+  },
+  "Chiniot": {
+    "lat": 31.72,
+    "lon": 72.98,
+    "provider": "FESCO"
+  },
+  "Dera Ghazi Khan": {
+    "lat": 30.05,
+    "lon": 70.63,
+    "provider": "MEPCO"
+  },
+  "Dera Ismail Khan": {
+    "lat": 31.83,
+    "lon": 70.9,
+    "provider": "PESCO"
+  },
+  "Faisalabad": {
+    "lat": 31.42,
+    "lon": 73.08,
+    "provider": "FESCO"
+  },
+  "Gilgit": {
+    "lat": 35.92,
+    "lon": 74.31,
+    "provider": "GB Power"
+  },
+  "Gujranwala": {
+    "lat": 32.16,
+    "lon": 74.19,
+    "provider": "GEPCO"
+  },
+  "Gujrat": {
+    "lat": 32.57,
+    "lon": 74.08,
+    "provider": "GEPCO"
+  },
+  "Gwadar": {
+    "lat": 25.13,
+    "lon": 62.32,
+    "provider": "QESCO"
+  },
+  "Hyderabad": {
+    "lat": 25.4,
+    "lon": 68.37,
+    "provider": "HESCO"
+  },
+  "Islamabad": {
+    "lat": 33.68,
+    "lon": 73.05,
+    "provider": "IESCO"
+  },
+  "Jhang": {
+    "lat": 31.27,
+    "lon": 72.32,
+    "provider": "FESCO"
+  },
+  "Jhelum": {
+    "lat": 32.93,
+    "lon": 73.73,
+    "provider": "IESCO"
+  },
+  "Karachi": {
+    "lat": 24.86,
+    "lon": 67.01,
+    "provider": "K-Electric"
+  },
+  "Kasur": {
+    "lat": 31.12,
+    "lon": 74.45,
+    "provider": "LESCO"
+  },
+  "Lahore": {
+    "lat": 31.52,
+    "lon": 74.36,
+    "provider": "LESCO"
+  },
+  "Larkana": {
+    "lat": 27.56,
+    "lon": 68.21,
+    "provider": "SEPCO"
+  },
+  "Mardan": {
+    "lat": 34.2,
+    "lon": 72.04,
+    "provider": "PESCO"
+  },
+  "Mingora (Swat)": {
+    "lat": 34.77,
+    "lon": 72.36,
+    "provider": "PESCO"
+  },
+  "Mirpur Khas": {
+    "lat": 25.53,
+    "lon": 69.01,
+    "provider": "HESCO"
+  },
+  "Multan": {
+    "lat": 30.2,
+    "lon": 71.47,
+    "provider": "MEPCO"
+  },
+  "Muzaffarabad": {
+    "lat": 34.37,
+    "lon": 73.47,
+    "provider": "AJK Electricity"
+  },
+  "Nawabshah": {
+    "lat": 26.25,
+    "lon": 68.41,
+    "provider": "HESCO"
+  },
+  "Okara": {
+    "lat": 30.81,
+    "lon": 73.45,
+    "provider": "LESCO"
+  },
+  "Peshawar": {
+    "lat": 34.01,
+    "lon": 71.58,
+    "provider": "PESCO"
+  },
+  "Quetta": {
+    "lat": 30.18,
+    "lon": 66.98,
+    "provider": "QESCO"
+  },
+  "Rahim Yar Khan": {
+    "lat": 28.42,
+    "lon": 70.3,
+    "provider": "MEPCO"
+  },
+  "Rawalpindi": {
+    "lat": 33.6,
+    "lon": 73.04,
+    "provider": "IESCO"
+  },
+  "Sahiwal": {
+    "lat": 30.66,
+    "lon": 73.11,
+    "provider": "MEPCO"
+  },
+  "Sargodha": {
+    "lat": 32.08,
+    "lon": 72.67,
+    "provider": "FESCO"
+  },
+  "Sheikhupura": {
+    "lat": 31.71,
+    "lon": 73.98,
+    "provider": "LESCO"
+  },
+  "Sialkot": {
+    "lat": 32.49,
+    "lon": 74.53,
+    "provider": "GEPCO"
+  },
+  "Sukkur": {
+    "lat": 27.7,
+    "lon": 68.86,
+    "provider": "SEPCO"
+  },
+  "Turbat": {
+    "lat": 26.0,
+    "lon": 63.05,
+    "provider": "QESCO"
+  }
 }

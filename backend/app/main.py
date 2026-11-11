@@ -10,7 +10,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from google.genai import errors as genai_errors  # noqa: E402
-from pydantic import BaseModel  # noqa: E402
+from pydantic import BaseModel, Field  # noqa: E402
 
 from . import billfetch, db, gemini  # noqa: E402
 from .auth import optional_user, required_user  # noqa: E402
@@ -25,10 +25,14 @@ app.add_middleware(CORSMiddleware, allow_origins=os.getenv("CORS_ORIGINS", "*").
                    allow_headers=["*"])
 
 MAX_BYTES = 15 * 1024 * 1024
+MAX_FILES = 6
+MAX_TEXT = 20000  # characters of pasted text sent to the AI
 ALLOWED = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"}
 
 
 async def _read(files: list[UploadFile]) -> list[tuple[bytes, str]]:
+    if files and len(files) > MAX_FILES:
+        raise HTTPException(400, f"Please upload at most {MAX_FILES} files at a time.")
     out = []
     for f in files or []:
         b = await f.read()
@@ -127,6 +131,8 @@ async def extract_quote(files: list[UploadFile] = File(default=[]), text: Option
     data = await _read(files)
     if not data and not (text and text.strip()):
         raise HTTPException(400, "Upload a quote photo/PDF or paste the quote text.")
+    if text and len(text) > MAX_TEXT:
+        raise HTTPException(413, f"Pasted text is too long (max {MAX_TEXT:,} characters).")
     _consent(consent)
     q = _guard(gemini.extract_quote, data, text)
     system, matches = system_from_quote(q)
@@ -186,8 +192,8 @@ def bill_lookup(r: BillLookupReq, request: Request):
 
 class SpecReq(BaseModel):
     kind: Literal["panel", "inverter", "battery"]
-    brand: str
-    model: str
+    brand: str = Field(min_length=1, max_length=80)
+    model: str = Field(min_length=1, max_length=120)
 
 
 @app.post("/api/specs/lookup")
@@ -204,7 +210,7 @@ def specs_lookup(r: SpecReq):
 
 
 class TextReq(BaseModel):
-    text: str
+    text: str = Field(max_length=4000)
 
 
 @app.post("/api/profile/parse")
@@ -313,10 +319,10 @@ def report_outcome(rid: str, r: OutcomeReq, user: Optional[dict] = Depends(optio
 class BatteryReq(BaseModel):
     profile: Profile
     bill: Optional[Bill] = None
-    dc_kw: float
-    inverter_kw: float
+    dc_kw: float = Field(ge=0, le=2000)
+    inverter_kw: float = Field(ge=0, le=2000)
     inverter_type: Literal["on_grid", "hybrid", "off_grid"] = "on_grid"
-    cost_per_usable_kwh: float = 55000
+    cost_per_usable_kwh: float = Field(55000, gt=0, le=1000000)
 
 
 @app.post("/api/battery")
@@ -350,17 +356,24 @@ def _report_context(rid: str) -> dict | None:
     return ctx
 
 
+class ChatMsg(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=4000)
+
+
 class ChatReq(BaseModel):
-    messages: list[dict]
-    report_id: Optional[str] = None
+    messages: list[ChatMsg] = Field(max_length=40)
+    report_id: Optional[str] = Field(None, max_length=24)
 
 
 @app.post("/api/chat")
 def chat(r: ChatReq):
     if not r.messages:
         raise HTTPException(400, "Empty conversation.")
+    if r.messages[-1].role != "user" or not r.messages[-1].content.strip():
+        raise HTTPException(400, "Ask a question first.")
     ctx = _report_context(r.report_id) if r.report_id else None
-    return {"reply": _guard(gemini.chat, r.messages, ctx)}
+    return {"reply": _guard(gemini.chat, [m.model_dump() for m in r.messages], ctx)}
 
 
 @app.post("/api/chat/upload")
@@ -370,7 +383,12 @@ async def chat_upload(messages: str = Form(...), report_id: Optional[str] = Form
     data = await _read(files)
     if data:
         _consent(consent)
-    msgs = json.loads(messages)
+    try:
+        msgs = [ChatMsg.model_validate(m).model_dump() for m in json.loads(messages)][-40:]
+    except Exception:
+        raise HTTPException(400, "Invalid conversation.")
+    if not msgs or msgs[-1]["role"] != "user":
+        raise HTTPException(400, "Ask a question first.")
     ctx = _report_context(report_id) if report_id else None
     return {"reply": _guard(gemini.chat, msgs, ctx, data)}
 
@@ -405,3 +423,39 @@ def admin_verify(did: str, r: VerifyReq, x_admin_token: Optional[str] = Header(d
 def admin_stats(x_admin_token: Optional[str] = Header(default=None)):
     _admin(x_admin_token)
     return db.outcome_stats()
+
+
+# ---------- compare quotes, health check, financing ----------
+from .engine import extras  # noqa: E402
+
+
+class CompareReq(BaseModel):
+    ids: list[str] = Field(min_length=2, max_length=4)
+
+
+@app.post("/api/compare")
+def compare_reports(r: CompareReq):
+    found = []
+    for rid in dict.fromkeys(r.ids):
+        row = db.get_report(rid)
+        if not row:
+            raise HTTPException(404, f"Report {rid} not found.")
+        found.append((rid, row[0], row[1]))
+    if len(found) < 2:
+        raise HTTPException(400, "Pick at least two different reports.")
+    return extras.compare(found)
+
+
+@app.post("/api/health-check")
+def health_check(h: extras.HealthIn):
+    try:
+        return extras.health_check(h)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/financing")
+def financing(f: extras.FinanceIn):
+    if f.down_payment_rs >= f.amount_rs:
+        raise HTTPException(400, "Down payment must be less than the system price.")
+    return extras.financing(f)

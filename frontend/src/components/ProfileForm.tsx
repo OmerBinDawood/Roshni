@@ -26,21 +26,21 @@ export default function ProfileForm({ value, onChange, showRegime = true }: {
   return (
     <div className="space-y-5">
       <div className="rounded-xl bg-bg p-3 space-y-2">
-        <label>Describe your home in your own words (optional) — e.g. “Ghar mein 2 AC hain, ek inverter wala 1.5 ton, 1 HP motor, 4 ghantay load-shedding”</label>
-        <textarea dir="auto" rows={2} value={freeText} onChange={(e) => setFreeText(e.target.value)} />
+        <label htmlFor="pf-text">Describe your home in your own words (optional) — e.g. “Ghar mein 2 AC hain, ek inverter wala 1.5 ton, 1 HP motor, 4 ghantay load-shedding”</label>
+        <textarea id="pf-text" dir="auto" rows={2} value={freeText} onChange={(e) => setFreeText(e.target.value)} />
         <Button variant="ghost" onClick={parse} disabled={!freeText.trim() || parsing}>{parsing ? "Reading…" : "Fill the form for me"}</Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label>City</label>
-          <select value={value.city} onChange={(e) => set("city", e.target.value)}>
+          <label htmlFor="pf-city">City</label>
+          <select id="pf-city" value={value.city} onChange={(e) => set("city", e.target.value)}>
             {cities.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
         <div>
-          <label>Main goal</label>
-          <select value={value.goal} onChange={(e) => set("goal", e.target.value as Profile["goal"])}>
+          <label htmlFor="pf-goal">Main goal</label>
+          <select id="pf-goal" value={value.goal} onChange={(e) => set("goal", e.target.value as Profile["goal"])}>
             <option value="both">Lower bill + backup</option>
             <option value="bill">Lower bill</option>
             <option value="backup">Backup in load-shedding</option>

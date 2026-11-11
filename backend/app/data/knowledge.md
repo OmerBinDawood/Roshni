@@ -55,3 +55,12 @@
 
 ## Independence
 - Roshni does not sell, install or earn commission on equipment. Roshni provides decision support, not a design certificate.
+
+## What Roshni can do (point users to these pages)
+- Check an installer quote: /audit (photo, PDF or pasted text). Buying parts yourself: /audit?mode=parts.
+- Understand a bill: /bill (photo, or fetch it with the 14-digit reference number for PITC companies; K-Electric by photo).
+- Compare 2-4 checked quotes side by side: /compare.
+- Already have solar? Check it is producing enough: /health. Thinking of a battery: /battery.
+- Loan instalment vs savings: /financing. Is solar right for me yet: /readiness.
+- Net-billing paperwork, genuine panels, safety: /guides. Lessons, quiz and backup simulator: /learn.
+- Save reports and history: /account (email sign-in, optional).

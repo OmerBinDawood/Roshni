@@ -1,7 +1,7 @@
 """Solar readiness check (PRD 9.8, P0-lite): a 2-minute check that can honestly answer "not now"."""
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .data import regulatory
 
@@ -13,14 +13,14 @@ UNITS_PER_KWP_MONTH = 120  # rough Pakistan average (~4 units/kWp/day); indicati
 class ReadinessIn(BaseModel):
     owns_home: bool = True
     landlord_permission: bool = False
-    roof_area_sqft: Optional[float] = None
+    roof_area_sqft: Optional[float] = Field(None, ge=0, le=200000)
     shade: Literal["none", "some", "heavy"] = "none"
-    avg_monthly_units: Optional[float] = None
+    avg_monthly_units: Optional[float] = Field(None, ge=0, le=100000)
     protected: bool = False
-    sanctioned_load_kw: Optional[float] = None
+    sanctioned_load_kw: Optional[float] = Field(None, ge=0, le=1000)
     wants_net_billing: bool = True
     roof_condition: Literal["good", "old", "unsure"] = "good"
-    budget_lakh: Optional[float] = None
+    budget_lakh: Optional[float] = Field(None, ge=0, le=100000)
 
 
 def check(r: ReadinessIn) -> dict:

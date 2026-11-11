@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge, Button, Card, ErrorBox, Issues } from "@/components/ui";
 import { api, rs, type Finding } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
-import { ownerToken, useSession } from "@/lib/supabase";
+import { deviceReports, ownerToken, useSession } from "@/lib/supabase";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Report = any;
@@ -93,7 +93,7 @@ export default function ReportView() {
   }
   async function del() {
     if (!confirm("Delete this report permanently? The share link will stop working. This cannot be undone.")) return;
-    try { await api.del(`/report/${id}`, tok()); ownerToken.remove(id); router.push(session ? "/account" : "/"); } catch (e) { setError((e as Error).message); }
+    try { await api.del(`/report/${id}`, tok()); ownerToken.remove(id); deviceReports.remove(id); router.push(session ? "/account" : "/"); } catch (e) { setError((e as Error).message); }
   }
   async function saveToAccount() {
     try { await api.post(`/report/${id}/claim`, {}, tok()); setSaved(true); } catch (e) { setError((e as Error).message); }
@@ -111,6 +111,8 @@ export default function ReportView() {
         <Button variant="ghost" onClick={() => copy(window.location.href, "link")}>{copied === "link" ? "Copied ✓" : "🔗 Share link"}</Button>
         <Button variant="ghost" onClick={() => window.print()}>🖨️ Save as PDF</Button>
         <Button variant="ghost" onClick={() => window.dispatchEvent(new Event("roshni:open-assistant"))}>💬 Ask about this report</Button>
+        {!parts && <a href={`/audit?compare=${id}`} className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">⚖️ Compare with another quote</a>}
+        {!parts && f && <a href={`/financing?report=${id}`} className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">🏦 Loan vs savings</a>}
         {access?.can_manage && !access.owned_by_you && (session
           ? <Button variant="ghost" onClick={saveToAccount}>💾 Save to my account</Button>
           : <a href="/account" className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">💾 Sign in to save</a>)}

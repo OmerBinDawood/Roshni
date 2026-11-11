@@ -40,3 +40,15 @@ export const ownerToken = {
   set(id: string, t: string) { try { localStorage.setItem(`roshni-owner-${id}`, t); } catch {} },
   remove(id: string) { try { localStorage.removeItem(`roshni-owner-${id}`); } catch {} },
 };
+
+// Reports created on this device (so anonymous users can find and compare them without an account)
+export type DeviceReport = { id: string; title: string; created: string };
+export const deviceReports = {
+  list(): DeviceReport[] { try { return JSON.parse(localStorage.getItem("roshni-reports") || "[]"); } catch { return []; } },
+  add(r: DeviceReport) {
+    try { localStorage.setItem("roshni-reports", JSON.stringify([r, ...deviceReports.list().filter((x) => x.id !== r.id)].slice(0, 50))); } catch {}
+  },
+  remove(id: string) {
+    try { localStorage.setItem("roshni-reports", JSON.stringify(deviceReports.list().filter((x) => x.id !== id))); } catch {}
+  },
+};
