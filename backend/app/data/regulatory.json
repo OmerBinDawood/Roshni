@@ -1,0 +1,53 @@
+{
+  "version": "2026-11-11",
+  "as_of": "2026-11-11",
+  "note": "Indicative values from the Roshni PRD v2.1 (secondary sources). Every value marked verify must be confirmed against an official NEPRA / DISCO / FBR notification before production use.",
+  "regimes": {
+    "LEGACY_NET_METERING": {
+      "label": "Legacy net metering (agreement signed before 9 Feb 2026)",
+      "netting": "unit_1to1_monthly",
+      "agreement_term_years": 7,
+      "source_ref": "[1][2]"
+    },
+    "NET_BILLING_2026": {
+      "label": "Net billing (new users from 9 Feb 2026)",
+      "netting": "buyback",
+      "buyback_rate_rs": 11.0,
+      "buyback_rate_low_rs": 10.0,
+      "agreement_term_years": 5,
+      "source_ref": "[1][2] verify"
+    }
+  },
+  "net_billing_start_date": "2026-02-09",
+  "fixed_charges_rs": {
+    "protected": {"low": 200, "high": 300},
+    "non_protected": {"low": 275, "high": 675},
+    "source_ref": "[3] verify"
+  },
+  "protected": {
+    "threshold_units": 200,
+    "rate_rs_low": 10.0,
+    "rate_rs_high": 13.5,
+    "lockout_months": 6,
+    "abolition_target_year": 2027,
+    "source_ref": "[4][5] verify"
+  },
+  "non_protected_effective_rate_rs": {"low": 39.0, "typical": 45.0, "high": 55.0, "source_ref": "[4][5] verify; use the user's own bill wherever possible"},
+  "price_benchmarks": {
+    "as_of": "2026-11-10",
+    "panel_rs_per_w": {"low": 38, "high": 41, "n": null, "source_ref": "[11] SolarRate.pk dealer listings, tier-1 brands"},
+    "inverter_5_6kw_rs": {"low": 170000, "high": 375000, "source_ref": "[13] indicative, Apr 2026"},
+    "system_5kw_ongrid_rs": {"low": 650000, "high": 850000, "source_ref": "[12] indicative, Sep 2026"},
+    "system_5kw_hybrid_battery_rs": {"low": 850000, "high": 1150000, "source_ref": "[12] indicative, Sep 2026"}
+  },
+  "sources": {
+    "1": "https://bestsolarcompanypk.com/news/nepra-draft-amendment-restore-existing-net-metering-users-pakistan",
+    "2": "https://www.solarcitizen.com.pk/nepra-prosumer-regulations-2026/",
+    "3": "https://profit.pakistantoday.com.pk/2026/02/12/pakistans-power-regulator-introduces-rs200-675-fixed-monthly-charges-for-domestic-consumers",
+    "4": "https://en.dailypakistan.com.pk/03-Aug-2026/protected-vs-non-protected-electricity-rates-in-pakistan-for-200-units-2026-update",
+    "5": "https://arynews.tv/protected-consumers-pakistan-to-abolish-electricity-subsidies",
+    "11": "https://solarrate.pk/",
+    "12": "https://solarbazaar.io/knowledge/cost-roi/solar-panel-price-in-pakistan",
+    "13": "https://powerhouseexpress.com.pk/blogs/news/solar-inverter-price-in-pakistan-2026-types-brands-buying-guide"
+  }
+}

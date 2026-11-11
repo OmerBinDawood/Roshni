@@ -1,0 +1,13 @@
+{
+  "version": "2026-11-11",
+  "note": "Indicative typical running power (kW). Ranges, not single truths. AC values are electrical draw while the compressor runs, not cooling capacity.",
+  "ac_kw_per_ton": {"inverter": 0.75, "non_inverter": 1.15},
+  "ac_surge_multiplier": {"inverter": 1.2, "non_inverter": 3.0},
+  "fan_kw": 0.08,
+  "light_kw": 0.015,
+  "fridge_kw_avg": 0.12,
+  "fridge_surge_kw": 0.8,
+  "motor_kw_per_hp": 0.75,
+  "motor_surge_multiplier": 3.0,
+  "baseload_kw": 0.15
+}

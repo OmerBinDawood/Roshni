@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #fbf8f2;
+  --surface: #ffffff;
+  --ink: #1d1a14;
+  --muted: #6b6457;
+  --line: #e7e0d2;
+  --sun: #e8a317;
+  --sun-ink: #7a4f00;
+  --leaf: #1f7a4d;
+  --red: #b42318;
+  --amber: #b54708;
+  --blue: #1d4ed8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14120e;
+    --surface: #1e1b16;
+    --ink: #f3eee4;
+    --muted: #a69d8c;
+    --line: #353028;
+    --sun: #f2b53a;
+    --sun-ink: #f8d68a;
+    --leaf: #4cc38a;
+    --red: #f97066;
+    --amber: #fdb022;
+    --blue: #84adff;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-sun: var(--sun);
+  --color-sun-ink: var(--sun-ink);
+  --color-leaf: var(--leaf);
+  --color-bad: var(--red);
+  --color-warn: var(--amber);
+  --color-info: var(--blue);
+  --font-sans: var(--font-inter);
+  --font-urdu: var(--font-nastaliq);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+html[lang="ur"] body,
+.urdu {
+  font-family: var(--font-nastaliq), var(--font-inter), serif;
+  line-height: 2.1;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  color: var(--ink);
+  width: 100%;
+}
+input:not([type="checkbox"]):not([type="radio"]):focus, select:focus, textarea:focus { outline: 2px solid var(--sun); outline-offset: 1px; }
+label { font-size: 0.85rem; color: var(--muted); display: block; margin-bottom: 0.2rem; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; color: black; }
+}
+
+input[type="checkbox"], input[type="radio"] { accent-color: var(--sun); flex-shrink: 0; }
+input[type="range"] { width: 100%; accent-color: var(--sun); }

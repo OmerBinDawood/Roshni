@@ -1,0 +1,14 @@
+{
+  "Lahore": {"lat": 31.52, "lon": 74.36, "provider": "LESCO"},
+  "Karachi": {"lat": 24.86, "lon": 67.01, "provider": "K-Electric"},
+  "Islamabad": {"lat": 33.68, "lon": 73.05, "provider": "IESCO"},
+  "Rawalpindi": {"lat": 33.60, "lon": 73.04, "provider": "IESCO"},
+  "Faisalabad": {"lat": 31.42, "lon": 73.08, "provider": "FESCO"},
+  "Multan": {"lat": 30.20, "lon": 71.47, "provider": "MEPCO"},
+  "Peshawar": {"lat": 34.01, "lon": 71.58, "provider": "PESCO"},
+  "Quetta": {"lat": 30.18, "lon": 66.98, "provider": "QESCO"},
+  "Hyderabad": {"lat": 25.40, "lon": 68.37, "provider": "HESCO"},
+  "Gujranwala": {"lat": 32.16, "lon": 74.19, "provider": "GEPCO"},
+  "Sialkot": {"lat": 32.49, "lon": 74.53, "provider": "GEPCO"},
+  "Sukkur": {"lat": 27.70, "lon": 68.86, "provider": "SEPCO"}
+}
