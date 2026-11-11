@@ -1,53 +1,93 @@
 {
-  "version": "2026-11-11",
+  "version": "2026-11-11b",
   "as_of": "2026-11-11",
-  "note": "Indicative values from the Roshni PRD v2.1 (secondary sources). Every value marked verify must be confirmed against an official NEPRA / DISCO / FBR notification before production use.",
+  "note": "Domestic tariff verified against the official NEPRA notification S.R.O. 279(I)/2026 (12 Feb 2026). Buyback, regime and price figures are from dated news and market sources; see source_ref on each item.",
   "regimes": {
     "LEGACY_NET_METERING": {
       "label": "Legacy net metering (agreement signed before 9 Feb 2026)",
       "netting": "unit_1to1_monthly",
       "agreement_term_years": 7,
-      "source_ref": "[1][2]"
+      "source_ref": "[2][14] Existing agreements kept under the Feb 2026 draft amendment and April 2026 amendment (S.R.O. 547(I)/2026, reported); verify final text"
     },
     "NET_BILLING_2026": {
       "label": "Net billing (new users from 9 Feb 2026)",
       "netting": "buyback",
       "buyback_rate_rs": 11.0,
       "buyback_rate_low_rs": 10.0,
+      "buyback_basis": "National Average Energy Purchase Price (NAEPP)",
       "agreement_term_years": 5,
-      "source_ref": "[1][2] verify"
+      "source_ref": "[1] Dawn 10 Feb 2026: exports credited at NAEPP, ~Rs 10-11/unit; 5-year agreements"
     }
   },
   "net_billing_start_date": "2026-02-09",
+  "domestic_tariff": {
+    "source_ref": "[3] NEPRA / S.R.O. 279(I)/2026 dated 12 Feb 2026, Annex A-1 Residential (uniform tariff, XWDISCOs and K-Electric)",
+    "effective_from": "2026-02-12",
+    "lifeline": [
+      {"upto": 50, "rate": 3.95, "fixed_per_kw": 0},
+      {"upto": 100, "rate": 7.74, "fixed_per_kw": 0}
+    ],
+    "protected": [
+      {"upto": 100, "rate": 10.54, "fixed_per_kw": 200},
+      {"upto": 200, "rate": 13.01, "fixed_per_kw": 300}
+    ],
+    "unprotected": [
+      {"upto": 100, "rate": 22.44, "fixed_per_kw": 275},
+      {"upto": 200, "rate": 28.91, "fixed_per_kw": 300},
+      {"upto": 300, "rate": 33.10, "fixed_per_kw": 350},
+      {"upto": 400, "rate": 36.46, "fixed_per_kw": 400},
+      {"upto": 500, "rate": 38.95, "fixed_per_kw": 500},
+      {"upto": 600, "rate": 40.22, "fixed_per_kw": 675},
+      {"upto": 700, "rate": 41.85, "fixed_per_kw": 675},
+      {"upto": null, "rate": 47.20, "fixed_per_kw": 675}
+    ],
+    "billing_rules": {
+      "unprotected": "single slab: all units billed at the rate of the slab the monthly total falls in",
+      "protected": "one-previous-slab benefit: first 100 units at the 1-100 rate, the rest at the 101-200 rate",
+      "fixed_charge": "Rs per kW of sanctioned load per month, by the consumption slab"
+    },
+    "default_sanctioned_load_kw": 5,
+    "default_taxes_and_adjustments_factor": 1.25,
+    "taxes_note": "GST (18%), electricity duty, FPA/QTA and other levies are added on top of base charges. Roshni calibrates this factor from the user's own bill; 1.25 is used only when no bill is given."
+  },
   "fixed_charges_rs": {
     "protected": {"low": 200, "high": 300},
     "non_protected": {"low": 275, "high": 675},
-    "source_ref": "[3] verify"
+    "unit": "per kW of sanctioned load per month",
+    "source_ref": "[3]"
   },
   "protected": {
     "threshold_units": 200,
-    "rate_rs_low": 10.0,
-    "rate_rs_high": 13.5,
+    "rate_rs_low": 10.54,
+    "rate_rs_high": 13.01,
     "lockout_months": 6,
     "abolition_target_year": 2027,
-    "source_ref": "[4][5] verify"
+    "source_ref": "[3] rates; [4] six-month rule; [5] abolition plan (announcement, verify)"
   },
-  "non_protected_effective_rate_rs": {"low": 39.0, "typical": 45.0, "high": 55.0, "source_ref": "[4][5] verify; use the user's own bill wherever possible"},
+  "non_protected_effective_rate_rs": {"low": 28.0, "typical": 45.0, "high": 59.0, "source_ref": "Derived: SRO 279 base rates x ~1.25 taxes/adjustments; use the user's own bill wherever possible"},
   "price_benchmarks": {
-    "as_of": "2026-11-10",
-    "panel_rs_per_w": {"low": 38, "high": 41, "n": null, "source_ref": "[11] SolarRate.pk dealer listings, tier-1 brands"},
-    "inverter_5_6kw_rs": {"low": 170000, "high": 375000, "source_ref": "[13] indicative, Apr 2026"},
-    "system_5kw_ongrid_rs": {"low": 650000, "high": 850000, "source_ref": "[12] indicative, Sep 2026"},
-    "system_5kw_hybrid_battery_rs": {"low": 850000, "high": 1150000, "source_ref": "[12] indicative, Sep 2026"}
+    "as_of": "2026-11-11",
+    "panel_rs_per_w": {"low": 40, "high": 45, "n": null, "source_ref": "[6] Pakistani dealer listings Oct-Nov 2026 (A-grade N-type tier-1: Jinko, LONGi, Canadian)"},
+    "inverter_5_6kw_rs": {"low": 110000, "high": 290000, "source_ref": "[7] retailer listings Jul-Nov 2026; brand dependent"},
+    "system_5kw_ongrid_rs": {"low": 650000, "high": 850000, "source_ref": "[8] installer guides 2026 (indicative)"},
+    "system_5kw_hybrid_battery_rs": {"low": 850000, "high": 1150000, "source_ref": "[8] installer guides 2026; GreenOH lists Rs 890,000 on 11 Nov 2026"}
+  },
+  "taxes": {
+    "solar_panels_gst_pct": 10,
+    "source_ref": "[9] FY2026-27 budget left panel sales tax at 10% (proposal for 18% dropped)",
+    "inverters_gst_pct": 18,
+    "inverters_source_ref": "Single secondary source (Business Recorder via TaxCalcPK); verify with FBR"
   },
   "sources": {
-    "1": "https://bestsolarcompanypk.com/news/nepra-draft-amendment-restore-existing-net-metering-users-pakistan",
-    "2": "https://www.solarcitizen.com.pk/nepra-prosumer-regulations-2026/",
-    "3": "https://profit.pakistantoday.com.pk/2026/02/12/pakistans-power-regulator-introduces-rs200-675-fixed-monthly-charges-for-domestic-consumers",
+    "1": "https://www.dawn.com/news/1972203",
+    "2": "https://profit.pakistantoday.com.pk/2026/02/16/after-pms-orders-nepra-grants-30-day-protection-to-existing-net-metering-consumers",
+    "3": "https://nepra.org.pk/tariff/Tariff/Notifications/2026/02%20Feb/S.R.O.%20279(1)2026%20dated%2012-02-2026.pdf",
     "4": "https://en.dailypakistan.com.pk/03-Aug-2026/protected-vs-non-protected-electricity-rates-in-pakistan-for-200-units-2026-update",
     "5": "https://arynews.tv/protected-consumers-pakistan-to-abolish-electricity-subsidies",
-    "11": "https://solarrate.pk/",
-    "12": "https://solarbazaar.io/knowledge/cost-roi/solar-panel-price-in-pakistan",
-    "13": "https://powerhouseexpress.com.pk/blogs/news/solar-inverter-price-in-pakistan-2026-types-brands-buying-guide"
+    "6": "https://www.zell.pk/solar-panel-price-in-pakistan",
+    "7": "https://w11stop.com/inverex-hybrid-inverter-price-in-pakistan/inverex-nitrox-6-6kw-hybrid-solar-inverter-price-in-pakistan",
+    "8": "https://thegreenoh.com/solar-guides/5kw-solar-system-price-pakistan",
+    "9": "https://dailytimes.com.pk/1506881/budget-2026-27-brings-solar-tax-stability/",
+    "14": "https://propakistani.pk/2026/02/16/nepra-retains-net-metering-for-existing-solar-consumers/"
   }
 }

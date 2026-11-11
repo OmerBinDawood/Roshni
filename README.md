@@ -24,6 +24,8 @@ copy-paste list of questions for your installer.
 | Datasheet catalogue: fuzzy model matching, web lookups saved as *unverified*, admin review queue | `/admin` |
 | Bill-vs-answers reconciliation prompts; "what runs in load-shedding" per appliance | report |
 | Installer conversation kit (personal questions, checklist, red flags), outcome survey (north-star), report deletion | report |
+| Bill lookup by 14-digit reference number from the official PITC portal (all PITC DISCOs; K-Electric by photo). Never bypasses a CAPTCHA | `/bill`, audit bill step |
+| Optional sign-in (Supabase email code / magic link) to keep report history; anonymous creators keep a private ownership token | `/account` |
 | "Should I add a battery?" advisor | `/battery` |
 | Solar readiness check ("not now" is a valid answer) | `/readiness` |
 | On-grid vs hybrid explainer, "which type fits me" quiz, backup simulator, 10 lessons with audio, glossary | `/learn` |
@@ -54,7 +56,17 @@ frontend/  Next.js 16 + Tailwind (mobile-first, RTL Urdu)  --/api/* rewrite-->  
 
 Tables: `reports`, `datasheets` (catalogue + review queue), `decision_outcomes`. On Postgres, Row-Level Security is
 enabled with no policies, so Supabase's public REST API cannot read them; only the backend (postgres role) can.
-Supabase Auth (OTP sign-in to save history) is not wired in yet.
+Sign-in uses Supabase Auth (email one-time code or magic link). The backend verifies the session JWT against the
+project's public signing keys (`SUPABASE_JWKS_URL`). In the Supabase dashboard, add your site URL
+(e.g. `http://localhost:3000`) under Authentication → URL Configuration, and include `{{ .Token }}` in the
+Magic Link email template if you want users to type a 6-digit code.
+
+### Tariff data
+`backend/app/data/regulatory.json` holds the official domestic slab tariff from NEPRA S.R.O. 279(I)/2026
+(12 Feb 2026): lifeline, protected and unprotected rates, and fixed charges per kW of sanctioned load. Unprotected
+bills are priced single-slab (every unit at the slab rate); protected bills get the one-previous-slab benefit.
+Taxes and adjustments (GST, ED, FPA/QTA) are calibrated from the user's own bill. Buyback and market prices
+carry dated sources.
 
 ## Run locally
 
@@ -84,8 +96,9 @@ The direct `db.<ref>.supabase.co` host is IPv6-only and fails on many networks.
 
 ## Important caveats
 
-- Tariff, buyback, fixed-charge and price figures in `backend/app/data/regulatory.json` come from the PRD's secondary sources
-  and are marked *verify*. Confirm against official NEPRA / DISCO / FBR notifications before relying on them.
+- Domestic tariffs and fixed charges are verified against NEPRA S.R.O. 279(I)/2026. The net-billing buyback (~Rs 10-11,
+  NAEPP) and the April 2026 amendment for existing contracts come from news sources; re-check them when NEPRA
+  publishes changes. Market prices are dated dealer listings (Nov 2026).
 - Specs found by web search are labelled **unverified** in the UI and report; users should check them against the datasheet.
   Missing datasheet values give "cannot verify", never "pass".
 - PV losses (soiling 7%, ~15% total) are a first guess for Pakistani conditions; validate against real inverter logs (PRD §15.3).

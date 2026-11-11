@@ -16,7 +16,8 @@
 - **Net billing**: Post-9 Feb 2026 arrangement for new users: imports charged at retail, exports credited at a lower buyback rate (~Rs 10 to 11 per unit in 2026, verify).
 - **Buyback rate**: Price paid for each exported unit under net billing.
 - **Protected consumer**: Domestic consumer at or below 200 units/month, with lower rates; crossing 200 units once can cost protected status for six months. Government has signalled it may abolish the category by 2027.
-- **Fixed charge**: Monthly charge owed regardless of units used (Rs 200 to 675 depending on category/slab, from Feb 2026). Solar cannot remove it.
+- **Fixed charge**: Monthly charge of Rs 200 to 675 per kW of sanctioned load, depending on your slab (from 12 Feb 2026, NEPRA S.R.O. 279(I)/2026). Using fewer grid units can move you to a lower slab and a lower fixed charge, but it never reaches zero.
+- **Unit rates (S.R.O. 279(I)/2026, before taxes)**: lifeline Rs 3.95 (up to 50 units) and Rs 7.74 (51-100); protected Rs 10.54 (1-100) and Rs 13.01 (101-200); unprotected Rs 22.44 (1-100), 28.91 (101-200), 33.10 (201-300), 36.46 (301-400), 38.95 (401-500), 40.22 (501-600), 41.85 (601-700), 47.20 (above 700). Unprotected bills charge ALL units at the rate of the slab the total falls in. GST, electricity duty and FPA are added on top.
 - **FPA / QTA**: Fuel price adjustment / quarterly tariff adjustment added to bills.
 - **Sanctioned load**: Maximum load approved for the connection; affects phase and approvals.
 - **DISCO / K-Electric**: Distribution companies (e.g. LESCO, IESCO, MEPCO); K-Electric serves Karachi.

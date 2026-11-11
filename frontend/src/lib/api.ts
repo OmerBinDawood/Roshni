@@ -59,11 +59,21 @@ async function handle<T>(r: Response): Promise<T> {
   return r.json();
 }
 
+async function headers(extra: Record<string, string> = {}): Promise<Record<string, string>> {
+  const { accessToken } = await import("./supabase");
+  const t = await accessToken();
+  return { ...(t ? { authorization: `Bearer ${t}` } : {}), ...extra };
+}
+
 export const api = {
-  get: <T,>(path: string) => fetch(`/api${path}`).then(handle<T>),
-  post: <T,>(path: string, body: unknown) =>
-    fetch(`/api${path}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then(handle<T>),
-  upload: <T,>(path: string, form: FormData) => fetch(`/api${path}`, { method: "POST", body: form }).then(handle<T>),
+  get: async <T,>(path: string, extra?: Record<string, string>) =>
+    fetch(`/api${path}`, { headers: await headers(extra) }).then(handle<T>),
+  post: async <T,>(path: string, body: unknown, extra?: Record<string, string>) =>
+    fetch(`/api${path}`, { method: "POST", headers: await headers({ "content-type": "application/json", ...extra }), body: JSON.stringify(body) }).then(handle<T>),
+  upload: async <T,>(path: string, form: FormData) =>
+    fetch(`/api${path}`, { method: "POST", headers: await headers(), body: form }).then(handle<T>),
+  del: async <T,>(path: string, extra?: Record<string, string>) =>
+    fetch(`/api${path}`, { method: "DELETE", headers: await headers(extra) }).then(handle<T>),
 };
 
 export const rs = (n?: number | null) => (n == null ? "–" : `Rs ${Math.round(n).toLocaleString("en-PK")}`);

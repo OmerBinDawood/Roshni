@@ -7,12 +7,13 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile  # noqa: E402
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from google.genai import errors as genai_errors  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
-from . import db, gemini  # noqa: E402
+from . import billfetch, db, gemini  # noqa: E402
+from .auth import optional_user, required_user  # noqa: E402
 from .engine.audit import battery_options, run_audit  # noqa: E402
 from .engine.data import cities, regulatory  # noqa: E402
 from .engine.readiness import ReadinessIn, check as readiness_check  # noqa: E402
@@ -137,11 +138,7 @@ def validate(q: Quote):
     return {"validation": validate_quote(q)}
 
 
-@app.post("/api/extract/bill")
-async def extract_bill(file: UploadFile = File(...), consent: Optional[str] = Form(default=None)):
-    data = await _read([file])
-    _consent(consent)
-    d = _guard(gemini.decode_bill, data)
+def _bill_response(d) -> dict:
     thr = regulatory()["protected"]["threshold_units"]
     units = d.bill.current_units
     warnings = []
@@ -152,6 +149,39 @@ async def extract_bill(file: UploadFile = File(...), consent: Optional[str] = Fo
     return {**d.model_dump(), "protected_threshold": thr,
             "units_to_threshold": (thr - units) if units is not None else None,
             "warnings": warnings, "rules_as_of": regulatory()["as_of"]}
+
+
+@app.post("/api/extract/bill")
+async def extract_bill(file: UploadFile = File(...), consent: Optional[str] = Form(default=None)):
+    data = await _read([file])
+    _consent(consent)
+    return _bill_response(_guard(gemini.decode_bill, data))
+
+
+class BillLookupReq(BaseModel):
+    disco: str
+    reference: str
+    consent: bool = False
+
+
+@app.get("/api/bill/companies")
+def bill_companies():
+    return {"supported": sorted(billfetch.DISCOS), "not_supported": ["K-Electric"],
+            "source": "Official PITC web-bill portal (bill.pitc.com.pk)"}
+
+
+@app.post("/api/bill/lookup")
+def bill_lookup(r: BillLookupReq, request: Request):
+    _consent(str(r.consent))
+    try:
+        billfetch.rate_limit(request.client.host if request.client else "anon")
+        text = billfetch.fetch_bill_html(r.disco, r.reference)
+    except billfetch.LookupError_ as e:
+        status = {"invalid_ref": 400, "unsupported": 400, "not_found": 404, "rate_limited": 429, "captcha": 409}.get(e.code, 502)
+        raise HTTPException(status, e.message)
+    out = _bill_response(_guard(gemini.decode_bill_text, text))
+    out["source"] = "official PITC portal"
+    return out
 
 
 class SpecReq(BaseModel):
@@ -186,7 +216,7 @@ def profile_parse(r: TextReq):
 
 # ---------- audit + reports ----------
 @app.post("/api/audit")
-def audit(req: AuditRequest):
+def audit(req: AuditRequest, user: Optional[dict] = Depends(optional_user)):
     if req.system.panel_count <= 0 and req.mode == "full":
         raise HTTPException(400, "Add the number of panels (and their wattage) before checking.")
     try:
@@ -194,8 +224,11 @@ def audit(req: AuditRequest):
     except ValueError as e:
         raise HTTPException(400, str(e))
     report["validation"] = validate_quote(req.quote)
-    rid = db.save_report(req.mode, req.model_dump(mode="json"), report)
-    return {"id": rid, "report": report}
+    s = report["system_summary"]
+    title = (req.quote.installer_name or ("Parts list" if req.mode == "parts" else "Quote")) +         f" · {s['dc_kwp']} kWp {s['inverter_type'].replace('_', '-')}"
+    rid, token = db.save_report(req.mode, req.model_dump(mode="json"), report,
+                                user_id=user["sub"] if user else None, title=title)
+    return {"id": rid, "report": report, "owner_token": token, "saved_to_account": bool(user)}
 
 
 def _get(rid: str):
@@ -211,12 +244,47 @@ def get_report(rid: str):
     return {"id": rid, "request": request, "report": report}
 
 
-@app.delete("/api/report/{rid}")
-def delete_report(rid: str):
-    # PRD 13.3: user-controlled deletion
-    if not db.delete_report(rid):
+def _require_manage(rid: str, user: Optional[dict], token: Optional[str]):
+    ok = db.can_manage(rid, user["sub"] if user else None, token)
+    if ok is None:
         raise HTTPException(404, "Report not found")
+    if not ok:
+        raise HTTPException(403, "Only the person who created this report can do that.")
+
+
+@app.get("/api/report/{rid}/access")
+def report_access(rid: str, user: Optional[dict] = Depends(optional_user), x_owner_token: Optional[str] = Header(default=None)):
+    own = db.report_owner(rid)
+    if own is None:
+        raise HTTPException(404, "Report not found")
+    return {"can_manage": bool(db.can_manage(rid, user["sub"] if user else None, x_owner_token)),
+            "owned_by_you": bool(user and own[0] == user["sub"]), "in_an_account": own[0] is not None}
+
+
+@app.delete("/api/report/{rid}")
+def delete_report(rid: str, user: Optional[dict] = Depends(optional_user), x_owner_token: Optional[str] = Header(default=None)):
+    # PRD 13.3: user-controlled deletion (only the creator, not everyone holding the share link)
+    _require_manage(rid, user, x_owner_token)
+    db.delete_report(rid)
     return {"deleted": rid}
+
+
+@app.post("/api/report/{rid}/claim")
+def claim_report(rid: str, user: dict = Depends(required_user), x_owner_token: Optional[str] = Header(default=None)):
+    """Save an anonymous report to the signed-in user's history (needs the creator token)."""
+    _require_manage(rid, user, x_owner_token)
+    db.claim_report(rid, user["sub"])
+    return {"claimed": rid}
+
+
+@app.get("/api/me/reports")
+def my_reports(user: dict = Depends(required_user)):
+    return {"email": user.get("email"), "reports": db.list_user_reports(user["sub"])}
+
+
+@app.delete("/api/me/reports")
+def delete_my_reports(user: dict = Depends(required_user)):
+    return {"deleted": db.delete_user_reports(user["sub"])}
 
 
 @app.post("/api/report/{rid}/urdu")
@@ -235,8 +303,9 @@ class OutcomeReq(BaseModel):
 
 
 @app.post("/api/report/{rid}/outcome")
-def report_outcome(rid: str, r: OutcomeReq):
-    _get(rid)
+def report_outcome(rid: str, r: OutcomeReq, user: Optional[dict] = Depends(optional_user),
+                   x_owner_token: Optional[str] = Header(default=None)):
+    _require_manage(rid, user, x_owner_token)
     return {"id": db.save_outcome(rid, r.outcome, r.would_pay, (r.comment or "")[:1000])}
 
 

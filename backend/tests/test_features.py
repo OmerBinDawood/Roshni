@@ -76,12 +76,15 @@ def test_readiness():
 
 def test_report_lifecycle_outcome_delete():
     r = c.post("/api/audit", content=sample_request().model_dump_json(), headers={"content-type": "application/json"})
-    rid = r.json()["id"]
-    assert c.post(f"/api/report/{rid}/outcome", json={"outcome": "renegotiated", "would_pay": "yes"}).status_code == 200
-    assert c.post(f"/api/report/{rid}/outcome", json={"outcome": "bogus"}).status_code == 422
+    rid, tok = r.json()["id"], {"x-owner-token": r.json()["owner_token"]}
+    assert c.post(f"/api/report/{rid}/outcome", json={"outcome": "renegotiated"}).status_code == 403  # share-link viewer
+    assert c.post(f"/api/report/{rid}/outcome", json={"outcome": "renegotiated", "would_pay": "yes"}, headers=tok).status_code == 200
+    assert c.post(f"/api/report/{rid}/outcome", json={"outcome": "bogus"}, headers=tok).status_code == 422
     stats = c.get("/api/admin/stats", headers=ADMIN).json()
     assert stats["decisions_improved"] >= 1
-    assert c.delete(f"/api/report/{rid}").status_code == 200
+    assert c.delete(f"/api/report/{rid}").status_code == 403
+    assert c.delete(f"/api/report/{rid}", headers={"x-owner-token": "wrong"}).status_code == 403
+    assert c.delete(f"/api/report/{rid}", headers=tok).status_code == 200
     assert c.get(f"/api/report/{rid}").status_code == 404
 
 
@@ -140,3 +143,19 @@ def test_grand_total_mismatch_of_1_percent_is_flagged():
                           LineItem(item_type="battery", description="b", brand="a", model="b", quantity=1, unit_price=1225000, line_total=1225000)],
               grand_total=1550000)
     assert any("grand total says Rs 1,550,000" in i["msg"] for i in validate_quote(q))
+
+
+def test_official_slab_tariff_math():
+    from app.engine.finance import Tariff, make_tariff
+    from app.schemas import Bill
+    t = Tariff(protected=False, sanctioned_kw=5, factor=1.0, source="t")
+    assert t.base(520) == (520 * 40.22, 675 * 5)          # single slab: all units at the 501-600 rate
+    assert t.base(300) == (300 * 33.10, 350 * 5)
+    assert t.base(301) == (301 * 36.46, 400 * 5)          # crossing a slab boundary re-prices every unit
+    p = Tariff(protected=True, sanctioned_kw=2, factor=1.0, source="t")
+    assert p.base(150) == (100 * 10.54 + 50 * 13.01, 300 * 2)   # one-previous-slab benefit
+    assert p.base(250)[0] == 250 * 33.10                  # above 200 units: unprotected rates apply
+    cal = make_tariff(Bill(current_units=520, total_amount_rs=30678, sanctioned_load_kw=5))
+    assert abs(cal.factor - 30678 / (520 * 40.22 + 3375)) < 0.001 and "calibrated" in cal.source
+    # Sanctioned load inferred from the printed fixed charge when not shown
+    assert make_tariff(Bill(current_units=520, fixed_charges_rs=3375)).sanctioned_kw == 5

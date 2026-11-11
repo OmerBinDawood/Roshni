@@ -68,7 +68,9 @@ export default function About() {
         <ul className="mt-2 list-disc ps-5 space-y-1">
           <li>No account is needed. We ask your consent before any document is sent to our AI provider (Google Gemini) to be read.</li>
           <li>The AI is instructed not to copy names, addresses or reference numbers. Uploaded images are not stored; only the extracted figures you confirm are saved with your report.</li>
-          <li>Anyone with your report link can view it. You can delete a report at any time from the bottom of the report page; this removes it permanently.</li>
+          <li>Anyone with your report link can view it. Only you (on the device you used, or signed in) can delete it, save it, or answer the follow-up survey. Deleting removes it permanently.</li>
+          <li>Accounts are optional and use a one-time email code (via Supabase). We store your email and the reports you choose to save; you can delete all of them from “My reports”.</li>
+          <li>Bill lookup by reference number: on your request, Roshni fetches your duplicate bill once from the official PITC portal (bill.pitc.com.pk). Your reference number is not stored. If the portal asks for a CAPTCHA we stop and ask for a photo instead. K-Electric bills must be uploaded as a photo.</li>
           <li>Text inside documents is treated as data, never as instructions to our system.</li>
           <li>Assistant conversations are not stored.</li>
         </ul>

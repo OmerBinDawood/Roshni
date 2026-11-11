@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import BillLookup from "@/components/BillLookup";
 import FilePick from "@/components/FilePick";
 import { Button, Card, Consent, ErrorBox, Issues } from "@/components/ui";
 import { api, rs, type Bill } from "@/lib/api";
@@ -36,6 +37,9 @@ export default function BillPage() {
           <Consent checked={consent} onChange={setConsent} />
           <Button onClick={decode} disabled={busy || !files.length || !consent}>{busy ? t("working") : "Explain my bill"}</Button>
         </Card>
+      )}
+      {!d && (
+        <BillLookup<Decoded> onResult={setD} />
       )}
       {d && b && (
         <>

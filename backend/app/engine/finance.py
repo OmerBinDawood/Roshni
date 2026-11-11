@@ -1,4 +1,12 @@
-"""Bill and savings model for the user's regime (PRD 10.6). Deterministic; no LLM numbers."""
+"""Bill and savings model for the user's regime (PRD 10.6). Deterministic; no LLM numbers.
+
+Uses the official domestic slab tariff (S.R.O. 279(I)/2026):
+  - unprotected: every unit billed at the rate of the slab the monthly total falls in (single slab)
+  - protected (<= 200 units): one-previous-slab benefit
+  - fixed charge: Rs per kW of sanctioned load per month, by slab
+Taxes, FPA/QTA and duties are applied as one multiplier calibrated from the user's own bill.
+"""
+from dataclasses import dataclass
 from datetime import date
 
 from ..schemas import Bill, Profile
@@ -15,42 +23,79 @@ def select_regime(profile: Profile) -> tuple[str, int | None]:
     return "NET_BILLING_2026", None
 
 
-def effective_rate(bill: Bill | None) -> tuple[float, str]:
-    """Effective variable import price (Rs/unit). Prefer the user's own bill (PRD 9.3)."""
-    reg = regulatory()
-    if bill and bill.current_units and bill.current_units > 0:
-        variable = None
-        if bill.energy_charges_rs:
-            variable = bill.energy_charges_rs + (bill.fpa_rs or 0) + (bill.taxes_rs or 0)
-        elif bill.total_amount_rs:
-            variable = bill.total_amount_rs - (bill.fixed_charges_rs or 0)
-        if variable and variable > 0:
-            r = variable / bill.current_units
-            if 5 < r < 120:
-                return round(r, 1), "your bill"
-    if bill and bill.protected:
-        p = reg["protected"]
-        return (p["rate_rs_low"] + p["rate_rs_high"]) / 2, "protected tariff estimate"
-    return reg["non_protected_effective_rate_rs"]["typical"], "typical non-protected rate (no bill)"
+def _slab(table: list[dict], units: float) -> dict:
+    for s in table:
+        if s["upto"] is None or units <= s["upto"]:
+            return s
+    return table[-1]
 
 
-def fixed_charge(bill: Bill | None) -> float:
-    if bill and bill.fixed_charges_rs:
-        return bill.fixed_charges_rs
-    fc = regulatory()["fixed_charges_rs"]
-    key = "protected" if bill and bill.protected else "non_protected"
-    return (fc[key]["low"] + fc[key]["high"]) / 2
+@dataclass
+class Tariff:
+    protected: bool
+    sanctioned_kw: float
+    factor: float  # taxes + adjustments multiplier
+    source: str
+
+    def base(self, units: float) -> tuple[float, float]:
+        """(energy_rs, fixed_rs) before taxes for one month."""
+        t = regulatory()["domestic_tariff"]
+        units = max(0.0, units)
+        if self.protected and units <= regulatory()["protected"]["threshold_units"]:
+            p = t["protected"]
+            energy = min(units, 100) * p[0]["rate"] + max(0.0, units - 100) * p[1]["rate"]
+            fixed = _slab(p, units)["fixed_per_kw"] * self.sanctioned_kw if units > 0 else 0.0
+        else:
+            s = _slab(t["unprotected"], units)
+            energy = units * s["rate"]
+            fixed = s["fixed_per_kw"] * self.sanctioned_kw
+        return energy, fixed
+
+    def month_cost(self, units: float) -> float:
+        e, f = self.base(units)
+        return (e + f) * self.factor
+
+    def fixed_cost(self, units: float) -> float:
+        return self.base(units)[1] * self.factor
+
+    def avg_rate(self, units: float) -> float:
+        return self.month_cost(units) / units if units > 0 else 0.0
+
+    def as_unprotected(self) -> "Tariff":
+        return Tariff(False, self.sanctioned_kw, self.factor, self.source)
 
 
-def month_bill(import_u: float, export_u: float, *, rate: float, fixed: float, regime: str,
-               buyback: float, credit_in: float = 0.0) -> tuple[float, float]:
+def make_tariff(bill: Bill | None) -> Tariff:
+    """Build the user's tariff, calibrating taxes/adjustments from their own bill (PRD 9.3)."""
+    t = regulatory()["domestic_tariff"]
+    protected = bool(bill and bill.protected)
+    kw = (bill.sanctioned_load_kw if bill and bill.sanctioned_load_kw else None)
+    if not kw and bill and bill.fixed_charges_rs and bill.current_units:
+        per_kw = _slab(t["protected" if protected else "unprotected"], bill.current_units)["fixed_per_kw"]
+        kw = round(bill.fixed_charges_rs / per_kw, 1) if per_kw else None
+    kw = kw or t["default_sanctioned_load_kw"]
+    tariff = Tariff(protected, kw, t["default_taxes_and_adjustments_factor"], "official 2026 slab tariff + typical taxes (no bill)")
+    if bill and bill.current_units and bill.total_amount_rs:
+        e, f = tariff.base(bill.current_units)
+        if e + f > 0:
+            factor = bill.total_amount_rs / (e + f)
+            if 1.0 <= factor <= 1.8:
+                tariff.factor = round(factor, 3)
+                tariff.source = "official 2026 slab tariff, calibrated to your bill"
+            else:
+                tariff.source = "official 2026 slab tariff + typical taxes (your bill total looked unusual, e.g. arrears)"
+    return tariff
+
+
+def month_bill(import_u: float, export_u: float, *, tariff: Tariff, regime: str, buyback: float,
+               credit_in: float = 0.0) -> tuple[float, float]:
     """Return (bill_rs, carried_credit_units)."""
     if regime == "LEGACY_NET_METERING":
         net = import_u - export_u - credit_in
         if net < 0:
-            return fixed, -net
-        return fixed + net * rate, 0.0
-    return fixed + import_u * rate - export_u * buyback, 0.0
+            return tariff.fixed_cost(0), -net
+        return tariff.month_cost(net), 0.0
+    return tariff.month_cost(import_u) - export_u * buyback, 0.0
 
 
 def annual_bill(monthly_import: list[float], monthly_export: list[float], **kw) -> float:

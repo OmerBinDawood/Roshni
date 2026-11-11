@@ -1,11 +1,13 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import BillLookup from "@/components/BillLookup";
 import FilePick from "@/components/FilePick";
 import ProfileForm from "@/components/ProfileForm";
 import { Button, Card, Consent, ErrorBox, Issues, Num } from "@/components/ui";
 import { api, defaultProfile, ITEM_TYPES, rs, type Bill, type Issue, type LineItem, type Profile, type Quote, type Spec, type SystemConfig } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
+import { ownerToken } from "@/lib/supabase";
 
 type Match = { kind: string; brand: string; model: string; match: number; verified: boolean };
 
@@ -69,8 +71,8 @@ export default function AuditPage() {
 
   async function submit() {
     const r = await run("Simulating a full year, hour by hour…", () =>
-      api.post<{ id: string }>("/audit", { quote, system, profile, bill: mode === "parts" ? null : bill, mode }));
-    if (r) router.push(`/report/${r.id}`);
+      api.post<{ id: string; owner_token: string }>("/audit", { quote, system, profile, bill: mode === "parts" ? null : bill, mode }));
+    if (r) { ownerToken.set(r.id, r.owner_token); router.push(`/report/${r.id}`); }
   }
 
   const canRead = consent && (quoteFiles.length > 0 || quoteText.trim().length > 0);
@@ -116,8 +118,7 @@ export default function AuditPage() {
 
       {stepName === "Bill" && (
         <Card className="space-y-4">
-          <p className="text-muted">Your latest electricity bill already shows 12 months of units. It lets Roshni use your real price per unit.
-            (Bill reference-number lookup is not available yet; please upload a photo.)</p>
+          <p className="text-muted">Your latest electricity bill already shows 12 months of units. It lets Roshni use your real price per unit.</p>
           {!bill && <FilePick files={billFile} onChange={setBillFile} multiple={false} label="Upload your latest electricity bill" />}
           {!bill && !consent && <Consent checked={consent} onChange={setConsent} />}
           {!bill && (
@@ -126,6 +127,12 @@ export default function AuditPage() {
               <Button onClick={readBill} disabled={!!busy || !billFile.length || !consent}>{busy ?? "Read bill"}</Button>
               <Button variant="ghost" onClick={() => setStep(step + 1)}>{t("skip")}</Button>
             </div>
+          )}
+          {!bill && (
+            <BillLookup<{ bill: Bill; warnings: string[] }> consent={consent} onResult={(r) => {
+              setBill(r.bill); setBillWarnings(r.warnings);
+              if (r.bill.phase) setProfile((p) => ({ ...p, phase: r.bill.phase }));
+            }} />
           )}
           {bill && <Issues issues={billWarnings.map((msg) => ({ level: "warn", msg }))} />}
           {bill && <BillEditor bill={bill} onChange={setBill} />}

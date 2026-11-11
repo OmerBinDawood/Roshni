@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge, Button, Card, ErrorBox, Issues } from "@/components/ui";
 import { api, rs, type Finding } from "@/lib/api";
 import { useLang } from "@/lib/i18n";
+import { ownerToken, useSession } from "@/lib/supabase";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Report = any;
@@ -55,8 +56,16 @@ export default function ReportView() {
   const [outcome, setOutcome] = useState("");
   const [wouldPay, setWouldPay] = useState("");
   const [sent, setSent] = useState(false);
+  const { session } = useSession();
+  const [access, setAccess] = useState<{ can_manage: boolean; owned_by_you: boolean; in_an_account: boolean } | null>(null);
+  const [saved, setSaved] = useState(false);
+  const tok = () => { const t = ownerToken.get(id); return t ? { "x-owner-token": t } : undefined; };
 
   useEffect(() => { api.get<{ report: Report }>(`/report/${id}`).then((r) => setRep(r.report)).catch((e) => setError(e.message)); }, [id]);
+  useEffect(() => {
+    const t = ownerToken.get(id);
+    api.get<typeof access>(`/report/${id}/access`, t ? { "x-owner-token": t } : undefined).then(setAccess).catch(() => setAccess(null));
+  }, [id, session, saved]);
   useEffect(() => {
     if (lang === "ur" && rep && !trError && !findingsTranslated(rep.findings)) {
       api.post<{ report: Report }>(`/report/${id}/urdu`, {}).then((r) => setRep(r.report)).catch((e) => setTrError(e.message));
@@ -79,12 +88,15 @@ export default function ReportView() {
   const L = (pair: string[]) => (ur ? pair[1] : pair[0]);
 
   async function sendOutcome() {
-    try { await api.post(`/report/${id}/outcome`, { outcome, would_pay: wouldPay || null }); setSent(true); }
+    try { await api.post(`/report/${id}/outcome`, { outcome, would_pay: wouldPay || null }, tok()); setSent(true); }
     catch (e) { setError((e as Error).message); }
   }
   async function del() {
     if (!confirm("Delete this report permanently? The share link will stop working. This cannot be undone.")) return;
-    try { await fetch(`/api/report/${id}`, { method: "DELETE" }); router.push("/"); } catch (e) { setError((e as Error).message); }
+    try { await api.del(`/report/${id}`, tok()); ownerToken.remove(id); router.push(session ? "/account" : "/"); } catch (e) { setError((e as Error).message); }
+  }
+  async function saveToAccount() {
+    try { await api.post(`/report/${id}/claim`, {}, tok()); setSaved(true); } catch (e) { setError((e as Error).message); }
   }
 
   return (
@@ -99,6 +111,10 @@ export default function ReportView() {
         <Button variant="ghost" onClick={() => copy(window.location.href, "link")}>{copied === "link" ? "Copied ✓" : "🔗 Share link"}</Button>
         <Button variant="ghost" onClick={() => window.print()}>🖨️ Save as PDF</Button>
         <Button variant="ghost" onClick={() => window.dispatchEvent(new Event("roshni:open-assistant"))}>💬 Ask about this report</Button>
+        {access?.can_manage && !access.owned_by_you && (session
+          ? <Button variant="ghost" onClick={saveToAccount}>💾 Save to my account</Button>
+          : <a href="/account" className="rounded-xl px-4 py-2.5 border border-line hover:bg-bg">💾 Sign in to save</a>)}
+        {access?.owned_by_you && <span className="text-leaf self-center text-sm">✓ Saved to your account</span>}
         {translating && <span className="text-muted self-center">Translating to Urdu…</span>}
         {trError && <span className="text-bad self-center text-sm">Urdu translation failed: {trError}</span>}
       </div>
@@ -240,7 +256,7 @@ export default function ReportView() {
         <p className="mt-2 text-xs text-muted">{t("disclaimer")}</p>
       </Card>
 
-      <Card className="no-print">
+      {access?.can_manage && <Card className="no-print">
         <h2 className="font-semibold">What did you decide? (helps us improve)</h2>
         {sent ? <p className="text-leaf mt-2">Thank you! ✓</p> : (
           <div className="mt-2 space-y-3">
@@ -258,12 +274,14 @@ export default function ReportView() {
             <Button onClick={sendOutcome} disabled={!outcome}>Send</Button>
           </div>
         )}
-      </Card>
+      </Card>}
 
-      <div className="no-print text-sm">
-        <button onClick={del} className="text-bad underline">Delete this report</button>
-        <span className="text-muted"> — removes it and its share link permanently.</span>
-      </div>
+      {access?.can_manage && (
+        <div className="no-print text-sm">
+          <button onClick={del} className="text-bad underline">Delete this report</button>
+          <span className="text-muted"> — removes it and its share link permanently.</span>
+        </div>
+      )}
     </div>
   );
 }

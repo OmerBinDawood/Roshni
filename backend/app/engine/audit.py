@@ -7,7 +7,7 @@ from ..schemas import AuditRequest, Bill, Profile
 from . import ENGINE_VERSION
 from .data import appliances, regulatory
 from .dispatch import dispatch, monthly, outage_mask
-from .finance import annual_bill, cashflow, effective_rate, fixed_charge, select_regime
+from .finance import annual_bill, cashflow, make_tariff, select_regime
 from .load import build_load, scale_to_bill
 from .pv import simulate_pv, site_temperatures
 from .rules import backup_loads, run_rules
@@ -35,8 +35,7 @@ def energy_model(profile: Profile, bill: Bill | None, *, dc_kw: float, ac_kw: fl
 def financials(profile: Profile, bill: Bill | None, idx, pv, load, outage, *, inverter_type, usable_kwh, batt_kw):
     reg = regulatory()
     regime, expiry = select_regime(profile)
-    rate, rate_src = effective_rate(bill)
-    fixed = fixed_charge(bill)
+    tariff = make_tariff(bill)
     nb = reg["regimes"]["NET_BILLING_2026"]
     no_solar = monthly({"import": np.where(outage, 0, load)}, idx)
     results = {}
@@ -44,10 +43,10 @@ def financials(profile: Profile, bill: Bill | None, idx, pv, load, outage, *, in
         d = dispatch(pv * sc["pv"], load, outage, usable_kwh=usable_kwh, batt_kw=batt_kw, inverter_type=inverter_type)
         m = monthly(d, idx)
         buyback = nb["buyback_rate_low_rs"] if sc["buyback"] == "low" else nb["buyback_rate_rs"]
-        before = annual_bill(list(no_solar["import"]), [0] * 12, rate=rate, fixed=fixed, regime="NET_BILLING_2026", buyback=buyback)
+        before = annual_bill(list(no_solar["import"]), [0] * 12, tariff=tariff, regime="NET_BILLING_2026", buyback=buyback)
         by_regime = {}
         for r in ("LEGACY_NET_METERING", "NET_BILLING_2026"):
-            after = annual_bill(list(m["import"]), list(m["export"]), rate=rate, fixed=fixed, regime=r, buyback=buyback)
+            after = annual_bill(list(m["import"]), list(m["export"]), tariff=tariff, regime=r, buyback=buyback)
             by_regime[r] = before - after
         results[name] = {"before": before, "by_regime": by_regime, "monthly": m, "dispatch": d}
     exp = results["expected"]
@@ -55,13 +54,18 @@ def financials(profile: Profile, bill: Bill | None, idx, pv, load, outage, *, in
     gen = float(np.sum(pv))
     export_share = float(m["export"].sum() / gen) if gen else 0.0
     # Stress test: rules change again (buyback falls to Rs 7, protected category abolished)
-    stress_rate = max(rate, reg["non_protected_effective_rate_rs"]["low"]) if bill and bill.protected else rate
-    stress_before = annual_bill(list(no_solar["import"]), [0] * 12, rate=stress_rate, fixed=fixed, regime="NET_BILLING_2026", buyback=7)
-    stress_after = annual_bill(list(m["import"]), list(m["export"]), rate=stress_rate, fixed=fixed, regime="NET_BILLING_2026", buyback=7)
+    st = tariff.as_unprotected()
+    stress_before = annual_bill(list(no_solar["import"]), [0] * 12, tariff=st, regime="NET_BILLING_2026", buyback=7)
+    stress_after = annual_bill(list(m["import"]), list(m["export"]), tariff=st, regime="NET_BILLING_2026", buyback=7)
     sav = {k: results[k]["by_regime"][regime] / 12 for k in SCENARIOS}
+    avg_units = float(no_solar["import"].mean())
+    rep_units = bill.current_units if bill and bill.current_units else avg_units
     return {
         "regime": regime, "regime_label": reg["regimes"][regime]["label"], "legacy_expiry_year": expiry,
-        "effective_rate": rate, "effective_rate_source": rate_src, "fixed_charge": fixed,
+        "effective_rate": round(tariff.avg_rate(rep_units), 1), "effective_rate_source": tariff.source,
+        "fixed_charge": round(tariff.fixed_cost(rep_units)),
+        "tariff": {"protected": tariff.protected, "sanctioned_kw": tariff.sanctioned_kw,
+                   "taxes_factor": tariff.factor, "source": tariff.source},
         "bill_before_monthly": round(exp["before"] / 12),
         "savings_monthly": {"low": round(sav["conservative"]), "expected": round(sav["expected"]), "high": round(sav["optimistic"])},
         "savings_annual_by_regime": {r: round(v) for r, v in exp["by_regime"].items()},
@@ -124,7 +128,10 @@ def run_audit(req: AuditRequest) -> dict:
     if fin:
         assumptions = [
             f"Rules as of {reg['as_of']} ({fin['regime_label']}); buyback ~Rs {reg['regimes']['NET_BILLING_2026']['buyback_rate_rs']:.0f}/unit.",
-            f"Import price Rs {fin['effective_rate']}/unit from {fin['effective_rate_source']}; fixed charge Rs {fin['fixed_charge']:.0f}/month stays after solar.",
+            f"Tariff: {fin['effective_rate_source']} (NEPRA S.R.O. 279(I)/2026); about Rs {fin['effective_rate']}/unit all-in at your usage, "
+            f"taxes and adjustments x{fin['tariff']['taxes_factor']}, sanctioned load {fin['tariff']['sanctioned_kw']:g} kW.",
+            f"Unprotected bills charge every unit at the rate of the slab your total falls in, so lowering your grid units also lowers the rate "
+            f"and the fixed charge (about Rs {fin['fixed_charge']:.0f}/month today); the fixed charge never reaches zero.",
             f"Weather: PVGIS typical year for {p.city}; {p.outage_hours_per_day:g} h/day load-shedding; soiling loss 7%, total system losses ~15%.",
             "Inverter replacement assumed in year 11; battery replacement every 10 years.",
         ]

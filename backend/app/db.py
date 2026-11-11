@@ -36,6 +36,9 @@ reports = Table(
     Column("mode", String(16)),
     Column("request", JSON),
     Column("report", JSON),
+    Column("user_id", String(64), index=True),         # Supabase auth user (null = anonymous)
+    Column("owner_token_hash", String(64)),            # sha256 of the creator's private token (anonymous ownership)
+    Column("title", String(200)),
 )
 
 datasheets = Table(
@@ -66,6 +69,25 @@ outcomes = Table(
 
 meta.create_all(engine)
 
+
+def _migrate():
+    """Add columns introduced after a table was first created (works on SQLite and Postgres)."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(engine)
+    for table in meta.sorted_tables:
+        have = {c["name"] for c in insp.get_columns(table.name)}
+        for col in table.columns:
+            if col.name not in have:
+                ddl = col.type.compile(dialect=engine.dialect)
+                with engine.begin() as c:
+                    c.execute(text(f'alter table {table.name} add column {col.name} {ddl}'))
+                    if col.index:
+                        c.execute(text(f'create index if not exists ix_{table.name}_{col.name} on {table.name} ({col.name})'))
+
+
+_migrate()
+
 if engine.dialect.name == "postgresql":
     # Supabase exposes the public schema over its REST API with the publishable key. Enable RLS with no
     # policies so only this backend (connecting as the postgres role, which bypasses RLS) can read or write.
@@ -85,11 +107,19 @@ def backend_name() -> str:
 
 
 # ---------- reports ----------
-def save_report(mode: str, request: dict, report: dict) -> str:
-    rid = new_id()
+def _hash(token: str) -> str:
+    import hashlib
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def save_report(mode: str, request: dict, report: dict, user_id: str | None = None, title: str | None = None) -> tuple[str, str]:
+    """Returns (report_id, owner_token). The token lets an anonymous creator delete or claim the report later."""
+    import secrets
+    rid, token = new_id(), secrets.token_urlsafe(24)
     with engine.begin() as c:
-        c.execute(insert(reports).values(id=rid, mode=mode, request=request, report=report, created_at=now()))
-    return rid
+        c.execute(insert(reports).values(id=rid, mode=mode, request=request, report=report, created_at=now(),
+                                         user_id=user_id, owner_token_hash=_hash(token), title=(title or "")[:200]))
+    return rid, token
 
 
 def get_report(rid: str):
@@ -98,9 +128,48 @@ def get_report(rid: str):
     return (r[0], r[1]) if r else None
 
 
+def report_owner(rid: str):
+    with engine.begin() as c:
+        r = c.execute(select(reports.c.user_id, reports.c.owner_token_hash).where(reports.c.id == rid)).first()
+    return (r[0], r[1]) if r else None
+
+
+def can_manage(rid: str, user_id: str | None, token: str | None) -> bool | None:
+    """None = no such report. Owner user, or holder of the creator token, may manage it."""
+    own = report_owner(rid)
+    if own is None:
+        return None
+    owner_user, token_hash = own
+    if user_id and owner_user == user_id:
+        return True
+    return bool(token and token_hash and _hash(token) == token_hash)
+
+
 def update_report(rid: str, report: dict):
     with engine.begin() as c:
         c.execute(update(reports).where(reports.c.id == rid).values(report=report))
+
+
+def claim_report(rid: str, user_id: str) -> bool:
+    with engine.begin() as c:
+        n = c.execute(update(reports).where(reports.c.id == rid).values(user_id=user_id)).rowcount
+    return n > 0
+
+
+def list_user_reports(user_id: str) -> list[dict]:
+    q = (select(reports.c.id, reports.c.created_at, reports.c.mode, reports.c.title, reports.c.report)
+         .where(reports.c.user_id == user_id).order_by(reports.c.created_at.desc()).limit(200))
+    with engine.begin() as c:
+        rows = c.execute(q).mappings().all()
+    out = []
+    for r in rows:
+        rep = r["report"] or {}
+        fin = rep.get("finance") or {}
+        out.append({"id": r["id"], "created_at": r["created_at"].isoformat() if r["created_at"] else None, "mode": r["mode"],
+                    "title": r["title"], "verdict": rep.get("verdict"), "counts": rep.get("counts"),
+                    "system_summary": rep.get("system_summary"), "capex": rep.get("capex"),
+                    "savings_monthly": fin.get("savings_monthly")})
+    return out
 
 
 def delete_report(rid: str) -> bool:
@@ -108,6 +177,15 @@ def delete_report(rid: str) -> bool:
         c.execute(delete(outcomes).where(outcomes.c.report_id == rid))
         n = c.execute(delete(reports).where(reports.c.id == rid)).rowcount
     return n > 0
+
+
+def delete_user_reports(user_id: str) -> int:
+    with engine.begin() as c:
+        ids = [r[0] for r in c.execute(select(reports.c.id).where(reports.c.user_id == user_id)).all()]
+        if ids:
+            c.execute(delete(outcomes).where(outcomes.c.report_id.in_(ids)))
+            c.execute(delete(reports).where(reports.c.id.in_(ids)))
+    return len(ids)
 
 
 # ---------- datasheets ----------
